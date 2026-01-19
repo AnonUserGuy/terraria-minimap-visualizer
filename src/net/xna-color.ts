@@ -1,26 +1,26 @@
 export default class Color {
-    R: number;
-    G: number;
-    B: number;
-    A: number;
+    r: number;
+    g: number;
+    b: number;
+    a: number;
     constructor(r: number, g: number, b: number, a = 255) {
-        this.R = r;
-        this.G = g;
-        this.B = b;
-        this.A = a;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
     }
 
     public toString() {
-        return `rgb(${this.R} ${this.G} ${this.B})`;
+        return `rgb(${this.r} ${this.g} ${this.b})`;
     }
 
     public copy() {
-        return new Color(this.R, this.G, this.B, this.A);
+        return new Color(this.r, this.g, this.b, this.a);
     }
 
-    static get Black() { return new Color(0, 0, 0) };
-    static get White() { return new Color(255, 255, 255) };
-    static get Transparent() { return new Color(0, 0, 0, 0) };
+    static get black() { return new Color(0, 0, 0) };
+    static get white() { return new Color(255, 255, 255) };
+    static get transparent() { return new Color(0, 0, 0, 0) };
 
-    static readonly globalBlack = Color.Black;
+    static readonly globalBlack = Color.black;
 }

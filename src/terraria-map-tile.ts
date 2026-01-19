@@ -1,6 +1,7 @@
 import PaintID from "./id/paint-ids.js";
 import TileID from "./id/tile-ids.js";
 import WallID from "./id/wall-ids.js";
+import TileLookupUtil from "./terraria-tile-lookup-util.js";
 
 export enum TileGroup {
     Empty,
@@ -14,25 +15,25 @@ export enum TileGroup {
 }
 
 export default class MapTile {
-    public Type: number;
-    public Light: number;
+    public type: number;
+    public light: number;
     private _extraData: number;
-    public Group: number;
-    public ID: number | undefined;
-    public Option: number | undefined;
+    public group: number;
+    public id: number | undefined;
+    public option: number | undefined;
 
-    public static Air = MapTile.Create(0, 255, 0, TileGroup.Air);
-    public static ShadowDirt = MapTile.Create(1, 0, PaintID.ShadowPaint, TileGroup.Tile, TileID.Dirt, 0);
-    public static anyWall = MapTile.Create(1, 0, 0, TileGroup.Wall, WallID.DirtUnsafe, 0);
+    public static air = MapTile.create(0, 255, 0, TileGroup.Air);
+    public static shadowDirt = MapTile.create(1, 0, PaintID.ShadowPaint, TileGroup.Tile, TileID.Dirt, 0);
+    public static anyWall = MapTile.create(1, 0, 0, TileGroup.Wall, WallID.DirtUnsafe, 0);
 
     constructor(type: number, light: number, extraData: number, group: number, id: number | undefined, option: number | undefined) {
-        this.Type = type;
-        this.Light = light;
+        this.type = type;
+        this.light = light;
         this._extraData = extraData;
 
-        this.Group = group;
-        this.ID = id;
-        this.Option = option;
+        this.group = group;
+        this.id = id;
+        this.option = option;
     }
 
     public get Color() {
@@ -42,41 +43,45 @@ export default class MapTile {
         this._extraData = (this._extraData & 128) | (value & 127);
     }
 
-    public WithLight(light: number) {
-        return new MapTile(this.Type, light, this._extraData | 128, this.Group, this.ID, this.Option);
+    public getXnaColor() {
+        return TileLookupUtil.getMapTileXnaColor(this);
     }
 
-    public static Create(type: number, light: number, color: number, group: number, id?: number | undefined, option?: number | undefined) {
+    public withLight(light: number) {
+        return new MapTile(this.type, light, this._extraData | 128, this.group, this.id, this.option);
+    }
+
+    public static create(type: number, light: number, color: number, group: number, id?: number | undefined, option?: number | undefined) {
         return new MapTile(type, light, color | 128, group, id, option);
     }
 
-    public Equals(other: MapTile) {
-        return !!other && this.Type === other.Type && this.Light === other.Light && this.Color === other.Color;
+    public equals(other: MapTile) {
+        return !!other && this.type === other.type && this.light === other.light && this.Color === other.Color;
     }
 
-    public EqualsAfterExport(other: MapTile) {
-        return !!other && (this.Type === other.Type
-            || ((this.Group === TileGroup.Air || this.Group === TileGroup.DirtRock)
-            && (other.Group === TileGroup.Air || other.Group === TileGroup.DirtRock)))
+    public equalsAfterExport(other: MapTile) {
+        return !!other && (this.type === other.type
+            || ((this.group === TileGroup.Air || this.group === TileGroup.DirtRock)
+            && (other.group === TileGroup.Air || other.group === TileGroup.DirtRock)))
             && this.Color === other.Color;
     }
 
-    public EqualsWithoutLight(other: MapTile) {
-        return !!other && this.Type === other.Type && this.Color === other.Color;
+    public equalsWithoutLight(other: MapTile) {
+        return !!other && this.type === other.type && this.Color === other.Color;
     }
 
     public toString() {
         let str;
-        if (this.Group === TileGroup.DirtRock) {
+        if (this.group === TileGroup.DirtRock) {
             str = "Underground Air";
-        } else if (this.Group === TileGroup.Water && this.ID === 3) {
+        } else if (this.group === TileGroup.Water && this.id === 3) {
             str = "Shimmer";
         } else {
-            str = TileGroup[this.Group];
+            str = TileGroup[this.group];
         }
-        str += `, light: ${this.Light}`;
-        if (this.Group === TileGroup.Tile || this.Group === TileGroup.Wall) {
-            str += `, paint: ${PaintID[this.Color]} (${this.Color}), type: ${this.Group === TileGroup.Tile ? TileID[this.ID!] : WallID[this.ID!]} (${this.ID!}), option: ${this.Option!}`;
+        str += `, light: ${this.light}`;
+        if (this.group === TileGroup.Tile || this.group === TileGroup.Wall) {
+            str += `, paint: ${PaintID[this.Color]} (${this.Color}), type: ${this.group === TileGroup.Tile ? TileID[this.id!] : WallID[this.id!]} (${this.id!}), option: ${this.option!}`;
         }
         return str;
     }

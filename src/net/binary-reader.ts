@@ -12,9 +12,9 @@ export default class BinaryReader {
         this.pos = pos;
     }
 
-    ReadString(n?: number): string {
+    readString(n?: number): string {
         if (!n) {
-            n = this.ReadByte();
+            n = this.readByte();
         }
         const start = this.pos;
         const end = this.pos + n;
@@ -27,7 +27,7 @@ export default class BinaryReader {
         return result;
     }
 
-    ReadBytes(n: number, signed: boolean): number {
+    readBytes(n: number, signed: boolean): number {
         let value = 0;
 
         if (this.pos + n > this.data.length) {
@@ -43,7 +43,7 @@ export default class BinaryReader {
         return value;
     }
 
-    ReadBigBytes(n: number): bigint {
+    readBigBytes(n: number): bigint {
         let value = 0n;
 
         if (this.pos + n > this.data.length) {
@@ -57,48 +57,48 @@ export default class BinaryReader {
         return value;
     }
 
-    ReadBoolean(): boolean {
-        return this.ReadByte() !== 0;
+    readBoolean(): boolean {
+        return this.readByte() !== 0;
     }
 
-    ReadByte(): number {
+    readByte(): number {
         if (this.pos >= this.data.length) {
             throw RangeError("Reached end of file");
         }
         return this.data[this.pos++];
     }
 
-    ReadInt16(): number {
-        return this.ReadBytes(2, true);
+    readInt16(): number {
+        return this.readBytes(2, true);
     }
 
-    ReadUInt16(): number {
-        return this.ReadBytes(2, false);
+    readUInt16(): number {
+        return this.readBytes(2, false);
     }
 
     ReadInt32(): number {
         // shifting unneccessary for 32-bit cause already hit js's bitwise op size limit
-        return this.ReadBytes(4, false);
+        return this.readBytes(4, false);
     }
 
     ReadUInt32(): bigint {
-        return this.ReadBigBytes(4);
+        return this.readBigBytes(4);
     }
 
-    ReadUInt64(): bigint {
-        return this.ReadBigBytes(8);
+    readUInt64(): bigint {
+        return this.readBigBytes(8);
     }
 
-    ReadBitArray(n?: number): boolean[] {
+    readBitArray(n?: number): boolean[] {
         if (!n) {
-            n = this.ReadInt16();
+            n = this.readInt16();
         }
         const arr: boolean[] = Array(n);
         let byte = 0;
         let mask = 128;
         for (let i = 0; i < n; ++i) {
             if (mask == 128) {
-                byte = this.ReadByte();
+                byte = this.readByte();
                 mask = 1;
             } else {
                 mask <<= 1;
@@ -106,5 +106,11 @@ export default class BinaryReader {
             if ((byte & mask) === mask) arr[i] = true;
         }
         return arr;
+    }
+
+    static async decompressBuffer(bytes: BufferSource, type: CompressionFormat) {
+        const decompressedStream = new Response(bytes).body!.pipeThrough(new DecompressionStream(type));
+        const buffer = await new Response(decompressedStream).arrayBuffer();
+        return buffer;
     }
 }

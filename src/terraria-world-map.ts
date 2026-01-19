@@ -1,7 +1,9 @@
 import MapTile, { TileGroup } from "./terraria-map-tile.js";
-import MapHelper from "./terraria-map-helper.js";
+import MapDeserializer from "./terraria-map-deserializer.js";
 import BinaryReader from "./net/binary-reader.js";
 import BinaryWriter from "./net/binary-writer.js";
+import TileLookupUtil from "./terraria-tile-lookup-util.js";
+import SchematicSerializer from "./tedit-schematic-serializer.js";
 
 export default class WorldMap {
 
@@ -56,8 +58,8 @@ export default class WorldMap {
         this.tiles = Array(this._height * this._width);
     }
 
-    public SetTile(x: number, y: number, tile: MapTile) {
-        if (tile.Group === TileGroup.Air && tile !== this.airTiles[this.airTiles.length - 1]) {
+    public setTile(x: number, y: number, tile: MapTile) {
+        if (tile.group === TileGroup.Air && tile !== this.airTiles[this.airTiles.length - 1]) {
             this.airTiles.push(tile);
             this.airTilesDepths.push(y);
         }
@@ -72,7 +74,7 @@ export default class WorldMap {
         for (let i = 0; i < this.airTiles.length; i++) {
             const tile = this.airTiles[i];
             const y = this.airTilesDepths[i];
-            tile.Type = MapHelper.GetMapAirTile(y, this.worldSurface!);
+            tile.type = TileLookupUtil.getMapAirTile(y, this.worldSurface!);
         }
         this.airTiles = [];
         this.airTilesDepths = [];
@@ -80,13 +82,13 @@ export default class WorldMap {
 
     public async read(data: (Uint8Array | ArrayBuffer)) {
         const reader = new BinaryReader(data);
-        await MapHelper.Load(reader, this);
+        await MapDeserializer.load(reader, this);
         this.fixAirTiles();
     }
 
     public writeSchematic() {
         const writer = new BinaryWriter();
-        MapHelper.WriteSchematic(writer, this);
+        SchematicSerializer.writeSchematic(writer, this);
         writer.trim();
         return writer.data.buffer;
     }

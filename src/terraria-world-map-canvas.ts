@@ -1,6 +1,7 @@
 import Color from "./net/xna-color.js";
-import MapHelper from "./terraria-map-helper.js";
+import MapDeserializer from "./terraria-map-deserializer.js";
 import MapTile, { TileGroup } from "./terraria-map-tile.js";
+import TileLookupUtil from "./terraria-tile-lookup-util.js";
 import WorldMap from "./terraria-world-map.js";
 
 export default class WorldMapCanvas extends WorldMap {
@@ -129,7 +130,7 @@ export default class WorldMapCanvas extends WorldMap {
                 }
 
                 let x2 = x + 1;
-                while (tile.EqualsWithoutLight(this.tile(x2, y)) && x2 < this._width) {
+                while (tile.equalsWithoutLight(this.tile(x2, y)) && x2 < this._width) {
                     x2++;
                 }
 
@@ -143,22 +144,22 @@ export default class WorldMapCanvas extends WorldMap {
         let ctx: OffscreenCanvasRenderingContext2D;
         let ctx2: OffscreenCanvasRenderingContext2D;
         let color: Color;
-        switch (tile.Group) {
+        switch (tile.group) {
             case TileGroup.Air:
             case TileGroup.DirtRock:
-                color = MapHelper.GetMapTileXnaColor(tile);
+                color = tile.getXnaColor();
                 ctx = this.canvasAir.getContext("2d")!;
                 this.drawNormalTiles(x, y, width, height, ctx, color);
                 break;
             case TileGroup.Tile:
-                color = MapHelper.GetMapTileXnaColor(tile);
+                color = tile.getXnaColor();
                 ctx = this.canvasTiles.getContext("2d")!;
                 ctx2 = this.canvasTilesPainted.getContext("2d")!;
                 this.drawNormalTiles(x, y, width, height, ctx, color);
                 this.drawPaintedTiles(x, y, width, height, ctx2, color, tile);
                 break;
             case TileGroup.Wall:
-                color = MapHelper.GetMapTileXnaColor(tile);
+                color = tile.getXnaColor();
                 ctx = this.canvasWalls.getContext("2d")!;
                 ctx2 = this.canvasWallsPainted.getContext("2d")!;
                 this.drawNormalTiles(x, y, width, height, ctx, color);
@@ -167,7 +168,7 @@ export default class WorldMapCanvas extends WorldMap {
             case TileGroup.Water:
             case TileGroup.Lava:
             case TileGroup.Honey:
-                color = MapHelper.GetMapTileXnaColor(tile);
+                color = tile.getXnaColor();
                 ctx = this.canvasLiquids.getContext("2d")!;
                 this.drawNormalTiles(x, y, width, height, ctx, color);
                 break;
@@ -182,7 +183,7 @@ export default class WorldMapCanvas extends WorldMap {
     private drawPaintedTiles(x: number, y: number, width: number, height: number, ctx2: OffscreenCanvasRenderingContext2D, color: Color, tile: MapTile) {
         if (tile.Color > 0) {
             const colorPainted = color.copy();
-            MapHelper.MapColor(tile.Type, colorPainted, tile.Color);
+            TileLookupUtil.mapColor(tile.type, colorPainted, tile.Color);
             ctx2!.fillStyle = colorPainted.toString();
             ctx2!.fillRect(x, y, width, height);
         }
@@ -199,12 +200,12 @@ export default class WorldMapCanvas extends WorldMap {
 
                 let x2 = x + 1;
                 let other = this.tile(x2, y);
-                while (other && tile.Light === other.Light && x2 < this._width) {
+                while (other && tile.light === other.light && x2 < this._width) {
                     x2++;
                     other = this.tile(x2, y);
                 }
 
-                this.drawLighting(x, y, x2 - x, 1, tile.Light);
+                this.drawLighting(x, y, x2 - x, 1, tile.light);
                 x = x2;
             }
         }

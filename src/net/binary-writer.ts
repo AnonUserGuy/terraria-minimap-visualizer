@@ -19,10 +19,10 @@ export default class BinaryWriter {
         this.data = this.data.slice(0, this.pos);
     }
 
-    WriteString(str: string, writeLength = true) {
+    writeString(str: string, writeLength = true) {
         const encoded = new TextEncoder().encode(str);
         if (writeLength) {
-            this.WriteByte(encoded.length);
+            this.writeByte(encoded.length);
         }
 
         this.checkAlloc(encoded.length);
@@ -30,7 +30,7 @@ export default class BinaryWriter {
         this.pos += encoded.length;
     }
 
-    WriteBytes(value: number, n: number) {
+    writeBytes(value: number, n: number) {
         this.checkAlloc(n);
 
         value <<= (4 - n) * 8;
@@ -42,22 +42,22 @@ export default class BinaryWriter {
         this.pos += n;
     }
 
-    WriteByte(byte: number) {
+    writeByte(byte: number) {
         this.checkAlloc(1);
         this.data[this.pos++] = byte;
     }
 
-    WriteInt16(value: number) {
-        this.WriteBytes(value, 2);
+    writeInt16(value: number) {
+        this.writeBytes(value, 2);
     }
 
-    WriteInt32(value: number) {
-        this.WriteBytes(value, 4);
+    writeInt32(value: number) {
+        this.writeBytes(value, 4);
     }
 
-    WriteBitArray(values: boolean[], writeLength = true) {
+    writeBitArray(values: boolean[], writeLength = true) {
         if (writeLength) {
-            this.WriteInt16(values.length);
+            this.writeInt16(values.length);
         }
 
         let data = 0;
@@ -70,17 +70,17 @@ export default class BinaryWriter {
             if (bitMask != 128) {
                 bitMask = (bitMask << 1);
             } else {
-                this.WriteByte(data);
+                this.writeByte(data);
                 data = 0;
                 bitMask = 1;
             }
         }
         if (bitMask != 1) {
-            this.WriteByte(data);
+            this.writeByte(data);
         }
     }
 
-    WriteUint8Array(array: Uint8Array, start: number, length: number) {
+    writeUInt8Array(array: Uint8Array, start: number, length: number) {
         this.checkAlloc(length);
         let end = start + length;
         for (let i = start; i < end; i++) {

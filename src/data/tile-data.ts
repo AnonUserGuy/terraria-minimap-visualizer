@@ -588,7 +588,7 @@ export default class TileData {
     public static solid: boolean[];
 
     static {
-        const tileFrameImportantIndexes = [
+        const tileFrameImportantIndices = [
             TileID.Benches,
             TileID.Platforms,
             TileID.Chairs,
@@ -640,7 +640,7 @@ export default class TileData {
             TileID.TeleportationPylon
         ]
         this.frameImportant = Array(TileID.Count);
-        for (const id of tileFrameImportantIndexes) {
+        for (const id of tileFrameImportantIndices) {
             this.frameImportant[id] = true;
         }
         for (const id in TileData.width) {
