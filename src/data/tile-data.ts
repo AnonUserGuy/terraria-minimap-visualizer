@@ -1,8 +1,8 @@
-import TileID from "../id/tile-ids.js";
+import { TileID } from "../id/tile-ids.js";
 
 interface IdList { [key: number]: number }
 
-export default class TileData {
+export class TileData {
     public static width: IdList = {
         "11": 2,
         "12": 2,

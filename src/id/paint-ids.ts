@@ -1,4 +1,4 @@
-enum PaintID {
+export enum PaintID {
 	None = 0,
 	RedPaint = 1,
 	OrangePaint = 2,
@@ -33,5 +33,3 @@ enum PaintID {
 	IlluminantPaint = 31,
 	Old_IlluminantPaint = 31
 }
-
-export default PaintID;

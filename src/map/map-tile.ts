@@ -1,7 +1,7 @@
-import PaintID from "./id/paint-ids.js";
-import TileID from "./id/tile-ids.js";
-import WallID from "./id/wall-ids.js";
-import TileLookupUtil from "./terraria-tile-lookup-util.js";
+import { PaintID } from "../id/paint-ids.js";
+import { TileID } from "../id/tile-ids.js";
+import { WallID } from "../id/wall-ids.js";
+import { TileLookupUtil } from "./tile-lookup-util.js";
 
 export enum TileGroup {
     Empty,
@@ -14,7 +14,7 @@ export enum TileGroup {
     DirtRock
 }
 
-export default class MapTile {
+export class MapTile {
     public type: number;
     public light: number;
     private _extraData: number;

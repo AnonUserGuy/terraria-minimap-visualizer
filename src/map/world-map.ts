@@ -1,11 +1,11 @@
-import MapTile, { TileGroup } from "./terraria-map-tile.js";
-import MapDeserializer from "./terraria-map-deserializer.js";
-import BinaryReader from "./net/binary-reader.js";
-import BinaryWriter from "./net/binary-writer.js";
-import TileLookupUtil from "./terraria-tile-lookup-util.js";
-import SchematicSerializer from "./tedit-schematic-serializer.js";
+import { MapTile, TileGroup } from "./map-tile.js";
+import { MapDeserializer } from "./map-deserializer.js";
+import { SchematicSerializer } from "../tedit/schematic-serializer.js";
+import { BinaryReader } from "../net/binary-reader.js";
+import { BinaryWriter } from "../net/binary-writer.js";
+import { TileLookupUtil } from "./tile-lookup-util.js";
 
-export default class WorldMap {
+export class WorldMap {
 
     protected _width: number;
     protected _height: number;
@@ -91,5 +91,9 @@ export default class WorldMap {
         SchematicSerializer.writeSchematic(writer, this);
         writer.trim();
         return writer.data.buffer;
+    }
+
+    public getLatestRelease() {
+        return TileLookupUtil.lastestRelease;
     }
 }

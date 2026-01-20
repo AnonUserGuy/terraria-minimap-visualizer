@@ -1,9 +1,9 @@
-import Color from "./net/xna-color.js";
-import TileID from "./id/tile-ids.js";
-import WallID from "./id/wall-ids.js";
-import MapTile from "./terraria-map-tile.js";
+import { Color } from "../net/xna-color.js";
+import { TileID } from "../id/tile-ids.js";
+import { WallID } from "../id/wall-ids.js";
+import { MapTile } from "./map-tile.js";
 
-export default class TileLookupUtil {
+export class TileLookupUtil {
     public static lastestRelease = 279;
 
     public static maxLiquidTypes = 4;

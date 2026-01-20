@@ -1,11 +1,11 @@
-import BinaryWriter from "./net/binary-writer.js";
-import TileData from "./data/tile-data.js";
-import TileID from "./id/tile-ids.js";
-import TileLookupUtil from "./terraria-tile-lookup-util.js";
-import WorldMap from "./terraria-world-map.js";
-import MapTile, { TileGroup } from "./terraria-map-tile.js";
+import { BinaryWriter } from "../net/binary-writer.js";
+import { TileData } from "../data/tile-data.js";
+import { TileID } from "../id/tile-ids.js";
+import { TileLookupUtil } from "../map/tile-lookup-util.js";
+import { WorldMap } from "../map/world-map.js";
+import { MapTile, TileGroup } from "../map/map-tile.js";
 
-export default class SchematicSerializer {
+export class SchematicSerializer {
     public static getFrameFromBaseOption(tileType: number, baseOption: number) {
         const tileCache = {
             frameX: 0,

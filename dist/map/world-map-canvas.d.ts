@@ -1,0 +1,33 @@
+import { WorldMap } from "./world-map.js";
+export declare class WorldMapCanvas extends WorldMap {
+    canvasLayers: OffscreenCanvas[];
+    canvasLighting: OffscreenCanvas;
+    canvasTilesPainted: OffscreenCanvas;
+    canvasTiles: OffscreenCanvas;
+    canvasWallsPainted: OffscreenCanvas;
+    canvasWalls: OffscreenCanvas;
+    canvasLiquids: OffscreenCanvas;
+    canvasAir: OffscreenCanvas;
+    canvasUnexplored: OffscreenCanvas;
+    canvasOutput: HTMLCanvasElement;
+    private isDrawnAccurate;
+    static readonly layerNames: string[];
+    constructor(canvas: HTMLCanvasElement);
+    updateDimensions(): void;
+    drawFast(layersActive: boolean[]): void;
+    private drawCanvasFast;
+    drawAccurate(layersActive: boolean[]): void;
+    private drawCanvasesAccurate;
+    private drawLayers;
+    private drawNormalLayers;
+    private drawTiles;
+    private drawNormalTiles;
+    private drawPaintedTiles;
+    private drawLightingLayer;
+    private drawLighting;
+    private drawUnexploredLayer;
+    read(data: (Uint8Array | ArrayBuffer)): Promise<void>;
+    private blendImageData;
+    private eraseCanvases;
+    private eraseImageData;
+}

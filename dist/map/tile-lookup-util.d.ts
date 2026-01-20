@@ -1,0 +1,30 @@
+import { Color } from "../net/xna-color.js";
+import { MapTile } from "./map-tile.js";
+export declare class TileLookupUtil {
+    static lastestRelease: number;
+    static maxLiquidTypes: number;
+    static maxSkyGradients: number;
+    static maxDirtGradients: number;
+    static maxRockGradients: number;
+    static snowTypes: number[];
+    static colorLookup: Color[];
+    static tileLookup: number[];
+    static tilePosition: number;
+    static wallPosition: number;
+    static wallLookup: number[];
+    static wallRangeStart: number;
+    static wallRangeEnd: number;
+    static liquidPosition: number;
+    static skyPosition: number;
+    static dirtPosition: number;
+    static rockPosition: number;
+    static hellPosition: number;
+    static tileOptionCounts: number[];
+    static wallOptionCounts: number[];
+    static idLookup: number[];
+    static optionLookup: number[];
+    static paintColor(color: number): Color;
+    static mapColor(type: number, oldColor: Color, colorType: number): void;
+    static getMapTileXnaColor(tile: MapTile): Color;
+    static getMapAirTile(y: number, worldSurface: number): number;
+}

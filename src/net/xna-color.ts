@@ -1,4 +1,4 @@
-export default class Color {
+export class Color {
     r: number;
     g: number;
     b: number;

@@ -1,79 +1,57 @@
-
-import BinaryReader from "./net/binary-reader.js";
-import MapTile, { TileGroup } from "./terraria-map-tile.js";
-import WorldMap from "./terraria-world-map.js";
-import TileID from "./id/tile-ids.js";
-import WallID from "./id/wall-ids.js";
-import TileLookupUtil from "./terraria-tile-lookup-util.js";
-
-
-enum FileType {
-    None,
-    Map,
-    World,
-    Player
-}
-
-interface FileMetadata {
-    magicNumber?: string;
-    fileType?: number;
-    revision?: number;
-    favorite?: boolean;
-    isChinese?: boolean;
-}
-
+import { BinaryReader } from "../net/binary-reader.js";
+import { MapTile, TileGroup } from "./map-tile.js";
+import { TileID } from "../id/tile-ids.js";
+import { WallID } from "../id/wall-ids.js";
+import { TileLookupUtil } from "./tile-lookup-util.js";
+var FileType;
+(function (FileType) {
+    FileType[FileType["None"] = 0] = "None";
+    FileType[FileType["Map"] = 1] = "Map";
+    FileType[FileType["World"] = 2] = "World";
+    FileType[FileType["Player"] = 3] = "Player";
+})(FileType || (FileType = {}));
 class OldMapHelper {
-    public misc: number;
-    public misc2: number;
-
     constructor() {
         this.misc = 0;
         this.misc2 = 0;
     }
-
-    public active() {
+    active() {
         if ((this.misc & 1) == 1) {
             return true;
         }
         return false;
     }
-
-    public water() {
+    water() {
         if ((this.misc & 2) == 2) {
             return true;
         }
         return false;
     }
-
-    public lava() {
+    lava() {
         if ((this.misc & 4) == 4) {
             return true;
         }
         return false;
     }
-
-    public honey() {
+    honey() {
         if ((this.misc2 & 0x40) == 64) {
             return true;
         }
         return false;
     }
-
-    public changed() {
+    changed() {
         if ((this.misc & 8) == 8) {
             return true;
         }
         return false;
     }
-
-    public wall() {
+    wall() {
         if ((this.misc & 0x10) == 16) {
             return true;
         }
         return false;
     }
-
-    public option() {
+    option() {
         let b = 0;
         if ((this.misc & 0x20) == 32) {
             b++;
@@ -89,40 +67,37 @@ class OldMapHelper {
         }
         return b;
     }
-
-    public color() {
+    color() {
         return ((this.misc2 & 0x1E) >> 1);
     }
 }
-
-export default class MapDeserializer {
-
-    public static estimateWorldSurface(worldHeight: number) {
+export class MapDeserializer {
+    static estimateWorldSurface(worldHeight) {
         return Math.round(0.2 * worldHeight + 75);
     }
-    public static estimateRockLayer(worldHeight: number) {
+    static estimateRockLayer(worldHeight) {
         return Math.round(0.35 * worldHeight + 25);
     }
-    public static estimateUnderworldLayer(worldHeight: number) {
+    static estimateUnderworldLayer(worldHeight) {
         return Math.round(0.9 * worldHeight - 125);
     }
-
-    public static async load(fileIO: BinaryReader, worldMap: WorldMap) {
+    static async load(fileIO, worldMap) {
         const release = fileIO.ReadInt32();
         if (release <= 91) {
             MapDeserializer.loadMapVersion1(fileIO, release, worldMap);
-        } else {
+        }
+        else {
             await MapDeserializer.loadMapVersion2(fileIO, release, worldMap);
         }
     }
-
-    static readFileMetadata(fileIO: BinaryReader) {
-        const metadata: FileMetadata = {};
+    static readFileMetadata(fileIO) {
+        const metadata = {};
         metadata.magicNumber = fileIO.readString(7);
         if (metadata.magicNumber !== "relogic") {
             if (metadata.magicNumber === "xindong") {
                 metadata.isChinese = true;
-            } else {
+            }
+            else {
                 throw new TypeError(`Bad file: missing relogic header, not terraria file`);
             }
         }
@@ -135,17 +110,14 @@ export default class MapDeserializer {
         metadata.favorite = !!(someBitfield & 1n);
         return metadata;
     }
-
-    static loadMapVersion1(fileIO: BinaryReader, release: number, worldMap: WorldMap) {
+    static loadMapVersion1(fileIO, release, worldMap) {
         const worldName = fileIO.readString();
         const worldId = fileIO.ReadInt32();
         const worldHeight = fileIO.ReadInt32();
         const worldWidth = fileIO.ReadInt32();
-
         const worldSurface = MapDeserializer.estimateWorldSurface(worldHeight);
         const rockLayer = MapDeserializer.estimateRockLayer(worldHeight);
         const underworldLayer = MapDeserializer.estimateUnderworldLayer(worldHeight);
-
         worldMap.setDimensions(worldWidth, worldHeight);
         worldMap.worldName = worldName;
         worldMap.worldId = worldId;
@@ -155,7 +127,6 @@ export default class MapDeserializer {
         worldMap.rockLayer = rockLayer;
         worldMap.worldSurface = worldSurface;
         worldMap.worldSurfaceEstimated = true;
-
         const oldMapHelper = new OldMapHelper();
         for (let x = 0; x < worldWidth; x++) {
             for (let y = 0; y < worldHeight; y++) {
@@ -171,8 +142,8 @@ export default class MapDeserializer {
                     }
                     let isGradientType = false;
                     const option = oldMapHelper.option();
-                    let tileType: number;
-                    let tileGroup: TileGroup;
+                    let tileType;
+                    let tileGroup;
                     if (oldMapHelper.active()) {
                         tileGroup = TileGroup.Tile;
                         tileType = option + TileLookupUtil.tileLookup[tileGroupIndex];
@@ -220,7 +191,6 @@ export default class MapDeserializer {
                     }
                     let tile = MapTile.create(tileType, light, 0, tileGroup, TileLookupUtil.idLookup[tileType], TileLookupUtil.optionLookup[tileType]);
                     let repeated = fileIO.readInt16();
-
                     if (light === 255) {
                         while (repeated > 0) {
                             repeated--;
@@ -244,10 +214,10 @@ export default class MapDeserializer {
                                 }
                                 tile = MapTile.create(tileType, light, 0, tileGroup, TileLookupUtil.idLookup[tileType], TileLookupUtil.optionLookup[tileType]);
                             }
-
                             worldMap.setTile(x, y, tile);
                         }
-                    } else {
+                    }
+                    else {
                         while (repeated > 0) {
                             y++;
                             repeated--;
@@ -273,7 +243,8 @@ export default class MapDeserializer {
                                     tileType = TileLookupUtil.hellPosition;
                                 }
                                 tile = MapTile.create(tileType, light, 0, tileGroup, TileLookupUtil.idLookup[tileType], TileLookupUtil.optionLookup[tileType]);
-                            } else {
+                            }
+                            else {
                                 tile = tile.withLight(light);
                             }
                             worldMap.setTile(x, y, tile);
@@ -287,27 +258,21 @@ export default class MapDeserializer {
             }
         }
     }
-
-
-
-    static async loadMapVersion2(fileIO: BinaryReader, release: number, worldMap: WorldMap) {
+    static async loadMapVersion2(fileIO, release, worldMap) {
         const metadata = release > 135 ? MapDeserializer.readFileMetadata(fileIO) : null;
         const worldName = fileIO.readString();
         const worldId = fileIO.ReadInt32();
         const worldHeight = fileIO.ReadInt32();
         const worldWidth = fileIO.ReadInt32();
-
         const rockLayer = MapDeserializer.estimateRockLayer(worldHeight);
-
         worldMap.setDimensions(worldWidth, worldHeight);
         worldMap.worldName = worldName;
         worldMap.worldId = worldId;
         worldMap.release = release;
-        worldMap.revision = metadata ? metadata.revision! : -1;
-        worldMap.isChinese = metadata ? metadata.isChinese! : false;
+        worldMap.revision = metadata ? metadata.revision : -1;
+        worldMap.isChinese = metadata ? metadata.isChinese : false;
         worldMap.rockLayer = rockLayer;
         worldMap.worldSurface = -1;
-
         const tileCount = fileIO.readInt16();
         const wallCount = fileIO.readInt16();
         const liquidCount = fileIO.readInt16();
@@ -399,7 +364,7 @@ export default class MapDeserializer {
         }
         //const hellOffset = mapTileIndex;
         tileTypes[index] = indexLatest;
-        const deflatedFileIO = release < 93 ? fileIO : new BinaryReader(await BinaryReader.decompressBuffer(fileIO.data.buffer.slice(fileIO.pos) as ArrayBuffer, "deflate-raw"));
+        const deflatedFileIO = release < 93 ? fileIO : new BinaryReader(await BinaryReader.decompressBuffer(fileIO.data.buffer.slice(fileIO.pos), "deflate-raw"));
         for (let y = 0; y < worldHeight; ++y) {
             for (let x = 0; x < worldWidth; ++x) {
                 const tileFlags = deflatedFileIO.readByte(); // VVWZYYYX
@@ -408,9 +373,9 @@ export default class MapDeserializer {
                 // Z - tile type index width
                 // W - has light level
                 // V - has repeated and repeated width
-                const tileColor = (tileFlags & 0b0000_0001) != 1 ? 0 : deflatedFileIO.readByte();
-                const tileGroup = (tileFlags & 0b0000_1110) >> 1;
-                let hasTileType: boolean;
+                const tileColor = (tileFlags & 1) != 1 ? 0 : deflatedFileIO.readByte();
+                const tileGroup = (tileFlags & 14) >> 1;
+                let hasTileType;
                 switch (tileGroup) {
                     case TileGroup.Empty:
                         hasTileType = false;
@@ -432,10 +397,10 @@ export default class MapDeserializer {
                         hasTileType = false;
                         break;
                 }
-                let tileType = !hasTileType ? 0 : ((tileFlags & 0b0001_0000) !== 0b0001_0000 ? deflatedFileIO.readByte() : deflatedFileIO.readUInt16());
-                const light = (tileFlags & 0b0010_0000) !== 0b0010_0000 ? 255 : deflatedFileIO.readByte();
+                let tileType = !hasTileType ? 0 : ((tileFlags & 16) !== 16 ? deflatedFileIO.readByte() : deflatedFileIO.readUInt16());
+                const light = (tileFlags & 32) !== 32 ? 255 : deflatedFileIO.readByte();
                 let repeated;
-                switch (((tileFlags & 0b1100_0000) >> 6)) {
+                switch (((tileFlags & 192) >> 6)) {
                     case 0:
                         repeated = 0;
                         break;
@@ -484,18 +449,17 @@ export default class MapDeserializer {
                             break;
                         }
                 }
-
                 const tileTypeLatest = tileTypes[tileType];
-                let tile: MapTile = MapTile.create(tileTypeLatest, light, tileColor >> 1 & 31, tileGroup, TileLookupUtil.idLookup[tileTypeLatest], TileLookupUtil.optionLookup[tileTypeLatest]);
+                let tile = MapTile.create(tileTypeLatest, light, tileColor >> 1 & 31, tileGroup, TileLookupUtil.idLookup[tileTypeLatest], TileLookupUtil.optionLookup[tileTypeLatest]);
                 worldMap.setTile(x, y, tile);
-
                 if (light === 255) {
                     while (repeated > 0) {
                         x++;
                         worldMap.setTile(x, y, tile);
                         repeated--;
                     }
-                } else {
+                }
+                else {
                     while (repeated > 0) {
                         x++;
                         tile = tile.withLight(deflatedFileIO.readByte());
@@ -508,7 +472,8 @@ export default class MapDeserializer {
         if (worldMap.worldSurface === -1) {
             worldMap.worldSurface = MapDeserializer.estimateWorldSurface(worldHeight);
             worldMap.worldSurfaceEstimated = true;
-        } else {
+        }
+        else {
             worldMap.worldSurfaceEstimated = false;
         }
     }

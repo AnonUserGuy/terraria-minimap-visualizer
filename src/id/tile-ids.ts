@@ -1,4 +1,4 @@
-enum TileID {
+export enum TileID {
 	Dirt = 0,
 	Stone = 1,
 	Grass = 2,
@@ -694,5 +694,3 @@ enum TileID {
 	RainbowMossBlock = 692,
 	Count = 693,
 }
-
-export default TileID;

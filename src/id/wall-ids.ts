@@ -1,4 +1,4 @@
-enum WallID {
+export enum WallID {
 	None = 0,
 	Stone = 1,
 	DirtUnsafe = 2,
@@ -348,5 +348,3 @@ enum WallID {
 	RainbowMossBlockWall = 346,
 	Count = 347,
 }
-
-export default WallID;

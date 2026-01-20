@@ -1,5 +1,3 @@
 *.code-workspace
 *.bat
-*.js
-*.cs
 node_modules/
