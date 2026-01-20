@@ -25,5 +25,5 @@ export declare class WorldMap {
     private fixAirTiles;
     read(data: (Uint8Array | ArrayBuffer)): Promise<void>;
     writeSchematic(): ArrayBufferLike;
-    getLatestRelease(): number;
+    static getLatestRelease(): number;
 }

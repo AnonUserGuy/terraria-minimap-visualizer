@@ -64,7 +64,7 @@ export class WorldMap {
         writer.trim();
         return writer.data.buffer;
     }
-    getLatestRelease() {
+    static getLatestRelease() {
         return TileLookupUtil.lastestRelease;
     }
 }

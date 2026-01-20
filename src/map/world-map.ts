@@ -93,7 +93,7 @@ export class WorldMap {
         return writer.data.buffer;
     }
 
-    public getLatestRelease() {
+    public static getLatestRelease() {
         return TileLookupUtil.lastestRelease;
     }
 }
