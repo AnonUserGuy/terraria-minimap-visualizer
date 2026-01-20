@@ -19,8 +19,8 @@ export declare class MapTile {
     static shadowDirt: MapTile;
     static anyWall: MapTile;
     constructor(type: number, light: number, extraData: number, group: number, id: number | undefined, option: number | undefined);
-    get Color(): number;
-    set Color(value: number);
+    get color(): number;
+    set color(value: number);
     getXnaColor(): import("../net/xna-color.js").Color;
     withLight(light: number): MapTile;
     static create(type: number, light: number, color: number, group: number, id?: number | undefined, option?: number | undefined): MapTile;

@@ -180,9 +180,9 @@ export class WorldMapCanvas extends WorldMap {
     }
 
     private drawPaintedTiles(x: number, y: number, width: number, height: number, ctx2: OffscreenCanvasRenderingContext2D, color: Color, tile: MapTile) {
-        if (tile.Color > 0) {
+        if (tile.color > 0) {
             const colorPainted = color.copy();
-            TileLookupUtil.mapColor(tile.type, colorPainted, tile.Color);
+            TileLookupUtil.mapColor(tile.type, colorPainted, tile.color);
             ctx2!.fillStyle = colorPainted.toString();
             ctx2!.fillRect(x, y, width, height);
         }

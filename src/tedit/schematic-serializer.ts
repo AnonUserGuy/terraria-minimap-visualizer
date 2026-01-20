@@ -465,27 +465,27 @@ export class SchematicSerializer {
                 tileData[dataIndex++] = ((v! & 0xFF00) >> 8); // high byte
             }
 
-            if (tile.Color !== 0) {
+            if (tile.color !== 0) {
                 header3 |= 0b0000_1000;
-                tileData[dataIndex++] = tile.Color;
+                tileData[dataIndex++] = tile.color;
             }
 
             if (needsWall) {
                 header1 |= 0b0000_0100;
                 tileData[dataIndex++] = wall.id! & 0xFF;
 
-                if (wall.Color !== 0) {
+                if (wall.color !== 0) {
                     header3 |= 0b0001_0000;
-                    tileData[dataIndex++] = wall.Color;
+                    tileData[dataIndex++] = wall.color;
                 }
             }
         } else if (tile.group === TileGroup.Wall) {
             header1 |= 0b0000_0100;
             tileData[dataIndex++] = tile.id! & 0xFF;
 
-            if (tile.Color !== 0) {
+            if (tile.color !== 0) {
                 header3 |= 0b0001_0000;
-                tileData[dataIndex++] = tile.Color;
+                tileData[dataIndex++] = tile.color;
             }
         } else if (tile.group >= TileGroup.Water && tile.group <= TileGroup.Honey) {
             if (tile.group === TileGroup.Water) {

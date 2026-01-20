@@ -22,10 +22,10 @@ export class MapTile {
         this.id = id;
         this.option = option;
     }
-    get Color() {
+    get color() {
         return this._extraData & 127;
     }
-    set Color(value) {
+    set color(value) {
         this._extraData = (this._extraData & 128) | (value & 127);
     }
     getXnaColor() {
@@ -38,16 +38,16 @@ export class MapTile {
         return new MapTile(type, light, color | 128, group, id, option);
     }
     equals(other) {
-        return !!other && this.type === other.type && this.light === other.light && this.Color === other.Color;
+        return !!other && this.type === other.type && this.light === other.light && this.color === other.color;
     }
     equalsAfterExport(other) {
         return !!other && (this.type === other.type
             || ((this.group === TileGroup.Air || this.group === TileGroup.DirtRock)
                 && (other.group === TileGroup.Air || other.group === TileGroup.DirtRock)))
-            && this.Color === other.Color;
+            && this.color === other.color;
     }
     equalsWithoutLight(other) {
-        return !!other && this.type === other.type && this.Color === other.Color;
+        return !!other && this.type === other.type && this.color === other.color;
     }
     toString() {
         let str;
@@ -62,7 +62,7 @@ export class MapTile {
         }
         str += `, light: ${this.light}`;
         if (this.group === TileGroup.Tile || this.group === TileGroup.Wall) {
-            str += `, paint: ${PaintID[this.Color]} (${this.Color}), type: ${this.group === TileGroup.Tile ? TileID[this.id] : WallID[this.id]} (${this.id}), option: ${this.option}`;
+            str += `, paint: ${PaintID[this.color]} (${this.color}), type: ${this.group === TileGroup.Tile ? TileID[this.id] : WallID[this.id]} (${this.id}), option: ${this.option}`;
         }
         return str;
     }

@@ -36,10 +36,10 @@ export class MapTile {
         this.option = option;
     }
 
-    public get Color() {
+    public get color() {
         return this._extraData & 127;
     }
-    public set Color(value: number) {
+    public set color(value: number) {
         this._extraData = (this._extraData & 128) | (value & 127);
     }
 
@@ -56,18 +56,18 @@ export class MapTile {
     }
 
     public equals(other: MapTile) {
-        return !!other && this.type === other.type && this.light === other.light && this.Color === other.Color;
+        return !!other && this.type === other.type && this.light === other.light && this.color === other.color;
     }
 
     public equalsAfterExport(other: MapTile) {
         return !!other && (this.type === other.type
             || ((this.group === TileGroup.Air || this.group === TileGroup.DirtRock)
             && (other.group === TileGroup.Air || other.group === TileGroup.DirtRock)))
-            && this.Color === other.Color;
+            && this.color === other.color;
     }
 
     public equalsWithoutLight(other: MapTile) {
-        return !!other && this.type === other.type && this.Color === other.Color;
+        return !!other && this.type === other.type && this.color === other.color;
     }
 
     public toString() {
@@ -81,7 +81,7 @@ export class MapTile {
         }
         str += `, light: ${this.light}`;
         if (this.group === TileGroup.Tile || this.group === TileGroup.Wall) {
-            str += `, paint: ${PaintID[this.Color]} (${this.Color}), type: ${this.group === TileGroup.Tile ? TileID[this.id!] : WallID[this.id!]} (${this.id!}), option: ${this.option!}`;
+            str += `, paint: ${PaintID[this.color]} (${this.color}), type: ${this.group === TileGroup.Tile ? TileID[this.id!] : WallID[this.id!]} (${this.id!}), option: ${this.option!}`;
         }
         return str;
     }
