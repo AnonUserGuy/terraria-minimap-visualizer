@@ -3,6 +3,7 @@ import { TileID } from "../id/tile-ids.js";
 interface IdList { [key: number]: number }
 
 export class TileData {
+    // parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
     public static width: IdList = {
         "11": 2,
         "12": 2,
@@ -272,7 +273,8 @@ export class TileData {
         "664": 2,
         "665": 2,
     }
-
+    
+    // parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
     public static height: IdList = {
         "10": 3,
         "11": 3,
@@ -564,6 +566,7 @@ export class TileData {
 
     public static tree: boolean[];
 
+    // tree UVs found by measuring tree sprite files
     public static treeBase = [0, 0];
     public static treeBaseTop = [22, 198];
 
@@ -588,6 +591,7 @@ export class TileData {
     public static solid: boolean[];
 
     static {
+        // as required by SchematicSerializer.getFrameFromBaseOption
         const tileFrameImportantIndices = [
             TileID.Benches,
             TileID.Platforms,
@@ -650,6 +654,7 @@ export class TileData {
             this.frameImportant[id] = true;
         }
 
+        // found with help from terraria wiki
         const needsWallIndices = [
             TileID.Painting3X3,
             TileID.Painting4X3,
@@ -658,14 +663,14 @@ export class TileData {
             TileID.Painting3X2,
             TileID.WeaponsRack,
             TileID.WeaponsRack2,
-            TileID.ItemFrame,
-            TileID.Torches,
+            TileID.ItemFrame
         ]
         this.needsWall = Array(TileID.Count);
         for (const id of needsWallIndices) {
             this.needsWall[id] = true;
         }
 
+        // found manually
         const treeIndices = [
             TileID.Trees,
             TileID.TreeTopaz,
@@ -684,7 +689,8 @@ export class TileData {
             this.tree[id] = true;
             this.frameImportant[id] = true;
         }
-
+        
+        // parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
         const solidIndices = [
             0,
             1,

@@ -108,6 +108,10 @@ export class BinaryReader {
         return arr;
     }
 
+    async decompress(type: CompressionFormat, length?: number) {
+        return new BinaryReader(await BinaryReader.decompressBuffer(this.data.buffer.slice(this.pos, length) as ArrayBuffer, type));
+    }
+
     static async decompressBuffer(bytes: BufferSource, type: CompressionFormat) {
         const decompressedStream = new Response(bytes).body!.pipeThrough(new DecompressionStream(type));
         const buffer = await new Response(decompressedStream).arrayBuffer();

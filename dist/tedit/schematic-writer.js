@@ -3,7 +3,7 @@ import { TileID } from "../id/tile-ids.js";
 import { TileLookupUtil } from "../map/tile-lookup-util.js";
 import { MapTile, TileGroup } from "../map/map-tile.js";
 import { PaintID } from "../id/paint-ids.js";
-export class SchematicSerializer {
+export class SchematicWriter {
     // largely adapted from Terraria-Map-Editor/src/TEdit.Editor/Clipboard/ClipboardBuffer.File.cs -> ClipboardBuffer.SaveV4
     static writeSchematic(bw, worldMap) {
         bw.writeString(worldMap.worldName);

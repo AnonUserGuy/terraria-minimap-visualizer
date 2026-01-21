@@ -4,9 +4,182 @@ import { TileID } from "../id/tile-ids.js";
 import { TileLookupUtil } from "../map/tile-lookup-util.js";
 import { WorldMap } from "../map/world-map.js";
 import { MapTile, TileGroup } from "../map/map-tile.js";
+import { PaintID } from "../id/paint-ids.js";
 
-export class SchematicSerializer {
-    public static getFrameFromBaseOption(tileType: number, baseOption: number) {
+export class SchematicWriter {
+    
+    // largely adapted from Terraria-Map-Editor/src/TEdit.Editor/Clipboard/ClipboardBuffer.File.cs -> ClipboardBuffer.SaveV4
+    static writeSchematic(bw: BinaryWriter, worldMap: WorldMap) {
+        bw.writeString(worldMap.worldName!);
+        bw.writeInt32(TileLookupUtil.lastestRelease + 10000);
+        bw.writeBitArray(TileData.frameImportant);
+        bw.writeInt32(worldMap.width);
+        bw.writeInt32(worldMap.height);
+
+        this.writeTiles(bw, worldMap);
+
+        // chests
+        bw.writeInt16(0); // count 
+        bw.writeInt16(0); // max chest contents
+
+        // signs
+        bw.writeInt16(0); // count
+
+        // entities
+        bw.writeInt32(0); // count
+
+        bw.writeString(worldMap.worldName!);
+        bw.writeInt32(TileLookupUtil.lastestRelease);
+        bw.writeInt32(worldMap.width);
+        bw.writeInt32(worldMap.height);
+    }
+
+    // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SaveTiles
+    static writeTiles(bw: BinaryWriter, worldMap: WorldMap) {
+        const u: number[] = [];
+        const v: number[] = [];
+        let lastWall = MapTile.anyWall;
+
+        for (let x = 0; x < worldMap.width; x++) {
+            for (let y = 0; y < worldMap.height; y++) {
+                const i = y * worldMap.width + x;
+                const tile = worldMap.tiles[i] || MapTile.shadowDirt;
+                let needsWall = false;
+                if (tile !== MapTile.shadowDirt) {
+                    if (tile.group === TileGroup.Tile && TileData.frameImportant[tile.id!]) {
+                        this.getTileUV(worldMap, tile, x, y, u, v);
+                        if (tile.id! === TileID.Torches) {
+                            needsWall = this.needsWall(worldMap, x, y);
+                        }
+                    } else if (tile.group === TileGroup.Wall) {
+                        lastWall = tile;
+                    }
+                }
+
+                const res = this.serializeTileData(tile, u[i], v[i], needsWall, lastWall);
+                const { tileData } = res;
+                let { headerIndex, dataIndex } = res;
+
+                let header1 = tileData[headerIndex];
+
+                let rle = 0;
+                if (tile.id !== 520 && tile.id !== 423) {
+                    let y2 = y + 1;
+                    let i2 = y2 * worldMap.width + x;
+                    while (y2 < worldMap.height && tile.equalsAfterExport(worldMap.tile(x, y2) || MapTile.shadowDirt) && (tile.group !== TileGroup.Tile || !TileData.frameImportant[tile.id!] || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
+                        rle++;
+                        y2++;
+                        i2 = y2 * worldMap.width + x;
+                    }
+                }
+                y += rle;
+
+                if (rle > 0) {
+                    tileData[dataIndex++] = rle & 0xFF;
+                    if (rle <= 255) {
+                        header1 |= 0b0100_0000;
+                    } else {
+                        tileData[dataIndex++] = rle >> 8;
+                        header1 |= 0b1000_0000;
+                    }
+                    tileData[headerIndex] = header1;
+                }
+
+                bw.writeUInt8Array(tileData, headerIndex, dataIndex - headerIndex);
+            }
+        }
+    }
+
+    // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SerializeTileData
+    static serializeTileData(tile: MapTile, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapTile) {
+        const tileData = new Uint8Array(16);
+        let dataIndex = 4;
+
+        let header3 = 0;
+        let header2 = 0;
+        let header1 = 0;
+        if (tile.group === TileGroup.Tile) {
+            header1 |= 0b0000_0010;
+            tileData[dataIndex++] = tile.id! & 0xFF;
+            if (tile.id! > 255) {
+                header1 |= 0b0010_0000;
+                tileData[dataIndex++] = tile.id! >> 8;
+            }
+
+            if (TileData.frameImportant[tile.id!]) {
+                tileData[dataIndex++] = (u! & 0xFF); // low byte
+                tileData[dataIndex++] = ((u! & 0xFF00) >> 8); // high byte
+                tileData[dataIndex++] = (v! & 0xFF); // low byte
+                tileData[dataIndex++] = ((v! & 0xFF00) >> 8); // high byte
+            }
+
+            if (tile.paint !== PaintID.None) {
+                header3 |= 0b0000_1000;
+                tileData[dataIndex++] = tile.paint;
+            }
+
+            if (needsWall) {
+                header1 |= 0b0000_0100;
+                tileData[dataIndex++] = wall.id! & 0xFF;
+
+                if (wall.paint !== PaintID.None) {
+                    header3 |= 0b0001_0000;
+                    tileData[dataIndex++] = wall.paint;
+                }
+            }
+        } else if (tile.group === TileGroup.Wall) {
+            header1 |= 0b0000_0100;
+            tileData[dataIndex++] = tile.id! & 0xFF;
+
+            if (tile.paint !== PaintID.None) {
+                header3 |= 0b0001_0000;
+                tileData[dataIndex++] = tile.paint;
+            }
+        } else if (tile.group >= TileGroup.Water && tile.group <= TileGroup.Honey) {
+            if (tile.group === TileGroup.Water) {
+                header1 |= 0b0000_1000;
+                if (tile.id === 3) { // shimmer
+                    header3 |= 0b1000_0000;
+                }
+            } else if (tile.group === TileGroup.Lava) {
+                header1 |= 0b0001_0000;
+            } else { // honey
+                header1 |= 0b0001_1000;
+            }
+            tileData[dataIndex++] = 255;
+        }
+
+        let headerIndex = 3;
+        if (header3 !== 0) {
+            header2 |= 0b0000_0001;
+            tileData[headerIndex--] = header3;
+        }
+        if (header2 !== 0) {
+            header1 |= 0b0000_0001;
+            tileData[headerIndex--] = header2;
+        }
+        tileData[headerIndex] = header1;
+        return { tileData, headerIndex, dataIndex };
+    }
+
+    static getTileUV(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
+        const i = y * worldMap.width + x;
+        if (TileData.tree[tile.id!]) {
+            this.resolveTree(worldMap, x, y, u, v);
+        } else if (tile.id! === TileID.Stalactite) {
+            this.resolveStalactite(worldMap, x, y, v);
+        } else if (tile.id! === TileID.PlantDetritus) {
+            this.resolvePlantDetritus(worldMap, x, y, u, v);
+        } else {
+            this.resolveWidth(worldMap, x, y, u);
+            this.resolveHeight(worldMap, x, y, v);
+        }
+        const { frameX, frameY } = this.getFrameFromBaseOption(tile.id!, tile.option!);
+        u[i] = (u[i] || 0) + frameX;
+        v[i] = (v[i] || 0) + frameY;
+    }
+
+    static getFrameFromBaseOption(tileType: number, baseOption: number) {
         const tileCache = {
             frameX: 0,
             frameY: 0
@@ -30,18 +203,6 @@ export class SchematicSerializer {
                     tileCache.frameX = n * 54;
                     break;
                 }
-            case TileID.RainbowBrick:
-            case TileID.RainbowMoss:
-            case TileID.RainbowMossBrick:
-            case TileID.RainbowMossBlock:
-                // position dependent
-                break;
-            case TileID.SandDrip:
-            case TileID.Cactus:
-            case TileID.SeaOats:
-            case TileID.OasisPlants:
-                // base option stores corrupt/crimsoned/hallowed
-                break;
             case TileID.Platforms:
                 if (baseOption === 1) {
                     tileCache.frameY = 48 * 18;
@@ -98,9 +259,6 @@ export class SchematicSerializer {
             case TileID.Pots:
             case TileID.PotsEcho:
                 tileCache.frameY = baseOption * 108;
-                break;
-            case TileID.Sunflower:
-                // just the head of the flower
                 break;
             case TileID.ShadowOrbs:
                 if (baseOption === 1) {
@@ -363,174 +521,6 @@ export class SchematicSerializer {
         return tileCache;
     }
 
-    static writeSchematic(bw: BinaryWriter, worldMap: WorldMap) {
-        bw.writeString(worldMap.worldName!);
-        bw.writeInt32(TileLookupUtil.lastestRelease + 10000);
-        bw.writeBitArray(TileData.frameImportant);
-        bw.writeInt32(worldMap.width);
-        bw.writeInt32(worldMap.height);
-
-        this.writeTiles(bw, worldMap);
-
-        // chests
-        bw.writeInt16(0); // count 
-        bw.writeInt16(0); // max chest contents
-
-        // signs
-        bw.writeInt16(0); // count
-
-        // entities
-        bw.writeInt32(0); // count
-
-        bw.writeString(worldMap.worldName!);
-        bw.writeInt32(TileLookupUtil.lastestRelease);
-        bw.writeInt32(worldMap.width);
-        bw.writeInt32(worldMap.height);
-    }
-
-    static writeTiles(bw: BinaryWriter, worldMap: WorldMap) {
-        const u: number[] = [];
-        const v: number[] = [];
-        let lastWall = MapTile.anyWall;
-
-        for (let x = 0; x < worldMap.width; x++) {
-            for (let y = 0; y < worldMap.height; y++) {
-                const i = y * worldMap.width + x;
-                const tile = worldMap.tiles[i] || MapTile.shadowDirt;
-                let needsWall = false;
-                if (tile !== MapTile.shadowDirt) {
-                    if (tile.group === TileGroup.Tile && TileData.frameImportant[tile.id!]) {
-                        this.getTileUV(worldMap, tile, x, y, u, v);
-                        if (tile.id! === TileID.Torches) {
-                            needsWall = this.needsWall(worldMap, x, y);
-                        }
-                    } else if (tile.group === TileGroup.Wall) {
-                        lastWall = tile;
-                    }
-                }
-
-                const res = this.serializeTileData(tile, u[i], v[i], needsWall, lastWall);
-                const { tileData } = res;
-                let { headerIndex, dataIndex } = res;
-
-                let header1 = tileData[headerIndex];
-
-                let rle = 0;
-                if (tile.id !== 520 && tile.id !== 423) {
-                    let y2 = y + 1;
-                    let i2 = y2 * worldMap.width + x;
-                    while (y2 < worldMap.height && tile.equalsAfterExport(worldMap.tile(x, y2) || MapTile.shadowDirt) && (tile.group !== TileGroup.Tile || !TileData.frameImportant[tile.id!] || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
-                        rle++;
-                        y2++;
-                        i2 = y2 * worldMap.width + x;
-                    }
-                }
-                y += rle;
-
-                if (rle > 0) {
-                    tileData[dataIndex++] = rle & 0xFF;
-                    if (rle <= 255) {
-                        header1 |= 0b0100_0000;
-                    } else {
-                        tileData[dataIndex++] = rle >> 8;
-                        header1 |= 0b1000_0000;
-                    }
-                    tileData[headerIndex] = header1;
-                }
-
-                bw.writeUInt8Array(tileData, headerIndex, dataIndex - headerIndex);
-            }
-        }
-    }
-
-    static serializeTileData(tile: MapTile, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapTile) {
-        const tileData = new Uint8Array(16);
-        let dataIndex = 4;
-
-        let header3 = 0;
-        let header2 = 0;
-        let header1 = 0;
-        if (tile.group === TileGroup.Tile) {
-            header1 |= 0b0000_0010;
-            tileData[dataIndex++] = tile.id! & 0xFF;
-            if (tile.id! > 255) {
-                header1 |= 0b0010_0000;
-                tileData[dataIndex++] = tile.id! >> 8;
-            }
-
-            if (TileData.frameImportant[tile.id!]) {
-                tileData[dataIndex++] = (u! & 0xFF); // low byte
-                tileData[dataIndex++] = ((u! & 0xFF00) >> 8); // high byte
-                tileData[dataIndex++] = (v! & 0xFF); // low byte
-                tileData[dataIndex++] = ((v! & 0xFF00) >> 8); // high byte
-            }
-
-            if (tile.color !== 0) {
-                header3 |= 0b0000_1000;
-                tileData[dataIndex++] = tile.color;
-            }
-
-            if (needsWall) {
-                header1 |= 0b0000_0100;
-                tileData[dataIndex++] = wall.id! & 0xFF;
-
-                if (wall.color !== 0) {
-                    header3 |= 0b0001_0000;
-                    tileData[dataIndex++] = wall.color;
-                }
-            }
-        } else if (tile.group === TileGroup.Wall) {
-            header1 |= 0b0000_0100;
-            tileData[dataIndex++] = tile.id! & 0xFF;
-
-            if (tile.color !== 0) {
-                header3 |= 0b0001_0000;
-                tileData[dataIndex++] = tile.color;
-            }
-        } else if (tile.group >= TileGroup.Water && tile.group <= TileGroup.Honey) {
-            if (tile.group === TileGroup.Water) {
-                header1 |= 0b0000_1000;
-                if (tile.id === 3) { // shimmer
-                    header3 |= 0b1000_0000;
-                }
-            } else if (tile.group === TileGroup.Lava) {
-                header1 |= 0b0001_0000;
-            } else { // honey
-                header1 |= 0b0001_1000;
-            }
-            tileData[dataIndex++] = 255;
-        }
-
-        let headerIndex = 3;
-        if (header3 !== 0) {
-            header2 |= 0b0000_0001;
-            tileData[headerIndex--] = header3;
-        }
-        if (header2 !== 0) {
-            header1 |= 0b0000_0001;
-            tileData[headerIndex--] = header2;
-        }
-        tileData[headerIndex] = header1;
-        return { tileData, headerIndex, dataIndex };
-    }
-
-    static getTileUV(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
-        const i = y * worldMap.width + x;
-        if (TileData.tree[tile.id!]) {
-            this.resolveTree(worldMap, x, y, u, v);
-        } else if (tile.id! === TileID.Stalactite) {
-            this.resolveStalactite(worldMap, x, y, v);
-        } else if (tile.id! === TileID.PlantDetritus) {
-            this.resolvePlantDetritus(worldMap, x, y, u, v);
-        } else {
-            this.resolveWidth(worldMap, x, y, u);
-            this.resolveHeight(worldMap, x, y, v);
-        }
-        const { frameX, frameY } = this.getFrameFromBaseOption(tile.id!, tile.option!);
-        u[i] = (u[i] || 0) + frameX;
-        v[i] = (v[i] || 0) + frameY;
-    }
-
     static resolveWidth(worldMap: WorldMap, x: number, y: number, u: number[]) {
         const i = y * worldMap.width + x;
         const tile = worldMap.tiles[i];
@@ -732,13 +722,10 @@ export class SchematicSerializer {
             this.plantDetritus2(worldMap, x, y, u, v);
             y += 2;
             this.plantDetritus2(worldMap, x, y, u, v);
-            y += 2;
         } else if (width === 3) {
             this.plantDetritus3(worldMap, x, y, u, v);
-            y += 3;
         } else if (width === 2) {
             this.plantDetritus2(worldMap, x, y, u, v);
-            y += 2;
         }
     }
 

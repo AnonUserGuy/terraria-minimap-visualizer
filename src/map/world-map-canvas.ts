@@ -1,9 +1,10 @@
-import { Color } from "../net/xna-color.js";
+import { PaintID } from "../id/paint-ids.js";
+import { Color } from "../net/color.js";
 import { MapTile, TileGroup } from "./map-tile.js";
-import { TileLookupUtil } from "./tile-lookup-util.js";
 import { WorldMap } from "./world-map.js";
 
 export class WorldMapCanvas extends WorldMap {
+
     public canvasLayers: OffscreenCanvas[];
     public canvasLighting: OffscreenCanvas;
     public canvasTilesPainted: OffscreenCanvas;
@@ -140,52 +141,42 @@ export class WorldMapCanvas extends WorldMap {
     }
 
     private drawTiles(x: number, y: number, width: number, height: number, tile: MapTile) {
+        let color = tile.getColor();
         let ctx: OffscreenCanvasRenderingContext2D;
-        let ctx2: OffscreenCanvasRenderingContext2D;
-        let color: Color;
         switch (tile.group) {
             case TileGroup.Air:
             case TileGroup.DirtRock:
-                color = tile.getXnaColor();
                 ctx = this.canvasAir.getContext("2d")!;
-                this.drawNormalTiles(x, y, width, height, ctx, color);
                 break;
             case TileGroup.Tile:
-                color = tile.getXnaColor();
                 ctx = this.canvasTiles.getContext("2d")!;
-                ctx2 = this.canvasTilesPainted.getContext("2d")!;
-                this.drawNormalTiles(x, y, width, height, ctx, color);
-                this.drawPaintedTiles(x, y, width, height, ctx2, color, tile);
+                if (tile.paint !== PaintID.None) {
+                    const color2 = tile.getColorPainted();
+                    const ctx2 = this.canvasTilesPainted.getContext("2d")!;
+                    this.drawColor(x, y, width, height, ctx2, color2);
+                }
                 break;
             case TileGroup.Wall:
-                color = tile.getXnaColor();
                 ctx = this.canvasWalls.getContext("2d")!;
-                ctx2 = this.canvasWallsPainted.getContext("2d")!;
-                this.drawNormalTiles(x, y, width, height, ctx, color);
-                this.drawPaintedTiles(x, y, width, height, ctx2, color, tile);
+                this.drawColor(x, y, width, height, ctx, color);
+                if (tile.paint !== PaintID.None) {
+                    const color2 = tile.getColorPainted();
+                    const ctx2 = this.canvasWallsPainted.getContext("2d")!;
+                    this.drawColor(x, y, width, height, ctx2, color2);
+                }
                 break;
             case TileGroup.Water:
             case TileGroup.Lava:
             case TileGroup.Honey:
-                color = tile.getXnaColor();
                 ctx = this.canvasLiquids.getContext("2d")!;
-                this.drawNormalTiles(x, y, width, height, ctx, color);
                 break;
         }
+        this.drawColor(x, y, width, height, ctx, color);
     }
 
-    private drawNormalTiles(x: number, y: number, width: number, height: number, ctx: OffscreenCanvasRenderingContext2D, color: Color) {
+    private drawColor(x: number, y: number, width: number, height: number, ctx: OffscreenCanvasRenderingContext2D, color: Color) {
         ctx.fillStyle = color.toString();
         ctx.fillRect(x, y, width, height);
-    }
-
-    private drawPaintedTiles(x: number, y: number, width: number, height: number, ctx2: OffscreenCanvasRenderingContext2D, color: Color, tile: MapTile) {
-        if (tile.color > 0) {
-            const colorPainted = color.copy();
-            TileLookupUtil.mapColor(tile.type, colorPainted, tile.color);
-            ctx2!.fillStyle = colorPainted.toString();
-            ctx2!.fillRect(x, y, width, height);
-        }
     }
 
     private drawLightingLayer() {

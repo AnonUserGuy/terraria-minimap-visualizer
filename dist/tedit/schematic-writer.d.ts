@@ -1,7 +1,7 @@
 import { BinaryWriter } from "../net/binary-writer.js";
 import { WorldMap } from "../map/world-map.js";
 import { MapTile } from "../map/map-tile.js";
-export declare class SchematicSerializer {
+export declare class SchematicWriter {
     static writeSchematic(bw: BinaryWriter, worldMap: WorldMap): void;
     static writeTiles(bw: BinaryWriter, worldMap: WorldMap): void;
     static serializeTileData(tile: MapTile, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapTile): {

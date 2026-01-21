@@ -13,5 +13,6 @@ export declare class BinaryReader {
     ReadUInt32(): bigint;
     readUInt64(): bigint;
     readBitArray(n?: number): boolean[];
+    decompress(type: CompressionFormat, length?: number): Promise<BinaryReader>;
     static decompressBuffer(bytes: BufferSource, type: CompressionFormat): Promise<ArrayBuffer>;
 }

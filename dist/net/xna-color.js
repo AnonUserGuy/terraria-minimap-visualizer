@@ -19,3 +19,4 @@ export class Color {
     ;
 }
 Color.globalBlack = Color.black;
+Color.globalWhite = Color.white;

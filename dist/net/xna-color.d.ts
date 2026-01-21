@@ -10,4 +10,5 @@ export declare class Color {
     static get white(): Color;
     static get transparent(): Color;
     static readonly globalBlack: Color;
+    static readonly globalWhite: Color;
 }

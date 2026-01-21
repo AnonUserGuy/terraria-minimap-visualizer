@@ -3,6 +3,7 @@ import { TileID } from "../id/tile-ids.js";
 export class TileData {
 }
 _a = TileData;
+// parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
 TileData.width = {
     "11": 2,
     "12": 2,
@@ -272,6 +273,7 @@ TileData.width = {
     "664": 2,
     "665": 2,
 };
+// parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
 TileData.height = {
     "10": 3,
     "11": 3,
@@ -557,6 +559,7 @@ TileData.height = {
     "664": 2,
     "665": 2
 };
+// tree UVs found by measuring tree sprite files
 TileData.treeBase = [0, 0];
 TileData.treeBaseTop = [22, 198];
 TileData.treeBaseBranchLeft = [88, 0];
@@ -572,6 +575,7 @@ TileData.treeBaseTrunkRight = [0, 132];
 TileData.treeTrunkRight = [22, 132];
 TileData.treeTrunkBoth = [88, 132];
 (() => {
+    // as required by SchematicSerializer.getFrameFromBaseOption
     const tileFrameImportantIndices = [
         TileID.Benches,
         TileID.Platforms,
@@ -633,6 +637,7 @@ TileData.treeTrunkBoth = [88, 132];
     for (const id in _a.height) {
         _a.frameImportant[id] = true;
     }
+    // found with help from terraria wiki
     const needsWallIndices = [
         TileID.Painting3X3,
         TileID.Painting4X3,
@@ -641,13 +646,13 @@ TileData.treeTrunkBoth = [88, 132];
         TileID.Painting3X2,
         TileID.WeaponsRack,
         TileID.WeaponsRack2,
-        TileID.ItemFrame,
-        TileID.Torches,
+        TileID.ItemFrame
     ];
     _a.needsWall = Array(TileID.Count);
     for (const id of needsWallIndices) {
         _a.needsWall[id] = true;
     }
+    // found manually
     const treeIndices = [
         TileID.Trees,
         TileID.TreeTopaz,
@@ -666,6 +671,7 @@ TileData.treeTrunkBoth = [88, 132];
         _a.tree[id] = true;
         _a.frameImportant[id] = true;
     }
+    // parsed from Terraria-Map-Editor/src/SettingsFileUpdater/settings.xml
     const solidIndices = [
         0,
         1,

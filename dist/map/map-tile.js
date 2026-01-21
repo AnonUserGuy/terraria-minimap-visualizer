@@ -14,40 +14,34 @@ export var TileGroup;
     TileGroup[TileGroup["DirtRock"] = 7] = "DirtRock";
 })(TileGroup || (TileGroup = {}));
 export class MapTile {
-    constructor(type, light, extraData, group, id, option) {
+    constructor(type, light, paint, group, id, option) {
         this.type = type;
         this.light = light;
-        this._extraData = extraData;
+        this.paint = paint;
         this.group = group;
         this.id = id;
         this.option = option;
     }
-    get color() {
-        return this._extraData & 127;
+    getColor() {
+        return TileLookupUtil.getTileColor(this);
     }
-    set color(value) {
-        this._extraData = (this._extraData & 128) | (value & 127);
+    getColorPainted() {
+        return TileLookupUtil.applyPaint(this.type, this.getColor(), this.paint);
     }
-    getXnaColor() {
-        return TileLookupUtil.getMapTileXnaColor(this);
-    }
-    withLight(light) {
-        return new MapTile(this.type, light, this._extraData | 128, this.group, this.id, this.option);
-    }
-    static create(type, light, color, group, id, option) {
-        return new MapTile(type, light, color | 128, group, id, option);
+    copyWithLight(light) {
+        return new MapTile(this.type, light, this.paint, this.group, this.id, this.option);
     }
     equals(other) {
-        return !!other && this.type === other.type && this.light === other.light && this.color === other.color;
+        return !!other && this.type === other.type && this.light === other.light && this.paint === other.paint;
     }
     equalsAfterExport(other) {
         return !!other && (this.type === other.type
             || ((this.group === TileGroup.Air || this.group === TileGroup.DirtRock)
                 && (other.group === TileGroup.Air || other.group === TileGroup.DirtRock)))
-            && this.color === other.color;
+            && this.paint === other.paint;
     }
     equalsWithoutLight(other) {
-        return !!other && this.type === other.type && this.color === other.color;
+        return !!other && this.type === other.type && this.paint === other.paint;
     }
     toString() {
         let str;
@@ -62,11 +56,11 @@ export class MapTile {
         }
         str += `, light: ${this.light}`;
         if (this.group === TileGroup.Tile || this.group === TileGroup.Wall) {
-            str += `, paint: ${PaintID[this.color]} (${this.color}), type: ${this.group === TileGroup.Tile ? TileID[this.id] : WallID[this.id]} (${this.id}), option: ${this.option}`;
+            str += `, paint: ${PaintID[this.paint]} (${this.paint}), type: ${this.group === TileGroup.Tile ? TileID[this.id] : WallID[this.id]} (${this.id}), option: ${this.option}`;
         }
         return str;
     }
 }
-MapTile.air = MapTile.create(0, 255, 0, TileGroup.Air);
-MapTile.shadowDirt = MapTile.create(1, 0, PaintID.ShadowPaint, TileGroup.Tile, TileID.Dirt, 0);
-MapTile.anyWall = MapTile.create(1, 0, 0, TileGroup.Wall, WallID.DirtUnsafe, 0);
+MapTile.air = new MapTile(0, 255, 0, TileGroup.Air);
+MapTile.shadowDirt = new MapTile(1, 0, PaintID.ShadowPaint, TileGroup.Tile, TileID.Dirt, 0);
+MapTile.anyWall = new MapTile(1, 0, 0, TileGroup.Wall, WallID.DirtUnsafe, 0);

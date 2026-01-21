@@ -21,8 +21,7 @@ export declare class WorldMapCanvas extends WorldMap {
     private drawLayers;
     private drawNormalLayers;
     private drawTiles;
-    private drawNormalTiles;
-    private drawPaintedTiles;
+    private drawColor;
     private drawLightingLayer;
     private drawLighting;
     private drawUnexploredLayer;

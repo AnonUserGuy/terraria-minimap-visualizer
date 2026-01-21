@@ -1,6 +1,6 @@
 import { TileGroup } from "./map-tile.js";
-import { MapDeserializer } from "./map-deserializer.js";
-import { SchematicSerializer } from "../tedit/schematic-serializer.js";
+import { MapReader } from "./map-reader.js";
+import { SchematicWriter } from "../tedit/schematic-writer.js";
 import { BinaryReader } from "../net/binary-reader.js";
 import { BinaryWriter } from "../net/binary-writer.js";
 import { TileLookupUtil } from "./tile-lookup-util.js";
@@ -55,12 +55,12 @@ export class WorldMap {
     }
     async read(data) {
         const reader = new BinaryReader(data);
-        await MapDeserializer.load(reader, this);
+        await MapReader.read(reader, this);
         this.fixAirTiles();
     }
     writeSchematic() {
         const writer = new BinaryWriter();
-        SchematicSerializer.writeSchematic(writer, this);
+        SchematicWriter.writeSchematic(writer, this);
         writer.trim();
         return writer.data.buffer;
     }

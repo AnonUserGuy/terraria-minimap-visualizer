@@ -32,5 +32,4 @@ export var PaintID;
     PaintID[PaintID["ShadowPaint"] = 29] = "ShadowPaint";
     PaintID[PaintID["NegativePaint"] = 30] = "NegativePaint";
     PaintID[PaintID["IlluminantPaint"] = 31] = "IlluminantPaint";
-    PaintID[PaintID["Old_IlluminantPaint"] = 31] = "Old_IlluminantPaint";
 })(PaintID || (PaintID = {}));

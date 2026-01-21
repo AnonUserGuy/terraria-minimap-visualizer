@@ -1,7 +1,8 @@
-import { Color } from "../net/xna-color.js";
+import { Color } from "../net/color.js";
 import { TileID } from "../id/tile-ids.js";
 import { WallID } from "../id/wall-ids.js";
 import { MapTile } from "./map-tile.js";
+import { PaintID } from "../id/paint-ids.js";
 
 export class TileLookupUtil {
     public static lastestRelease = 279;
@@ -26,9 +27,9 @@ export class TileLookupUtil {
     public static hellPosition: number;
     public static tileOptionCounts: number[];
     public static wallOptionCounts: number[];
-
     public static idLookup: number[];
     public static optionLookup: number[];
+    public static paintLookup: Color[];
 
     static {
         const tileColors: Color[][] = Array(TileID.Count);
@@ -1368,7 +1369,7 @@ export class TileLookupUtil {
         wallColors[320][0] = new Color(75, 30, 15);
         wallColors[321][0] = new Color(91, 108, 130);
         wallColors[322][0] = new Color(91, 108, 130);
-        const skyGradient: Color[] = Array(TileLookupUtil.maxSkyGradients);
+        const skyGradient: Color[] = Array(this.maxSkyGradients);
         let skyColorMin = new Color(50, 40, 255);
         let skyColorMax = new Color(145, 185, 255);
         for (let num6 = 0; num6 < skyGradient.length; num6++) {
@@ -1376,7 +1377,7 @@ export class TileLookupUtil {
             let num8 = 1 - num7;
             skyGradient[num6] = new Color((skyColorMin.r * num8 + skyColorMax.r * num7), (skyColorMin.g * num8 + skyColorMax.g * num7), (skyColorMin.b * num8 + skyColorMax.b * num7));
         }
-        const dirtGradient: Color[] = Array(TileLookupUtil.maxDirtGradients);
+        const dirtGradient: Color[] = Array(this.maxDirtGradients);
         let dirtColorMin = new Color(88, 61, 46);
         let dirtRockColorMax = new Color(37, 78, 123);
         for (let num9 = 0; num9 < dirtGradient.length; num9++) {
@@ -1384,7 +1385,7 @@ export class TileLookupUtil {
             let num11 = 1 - num10;
             dirtGradient[num9] = new Color((dirtColorMin.r * num11 + dirtRockColorMax.r * num10), (dirtColorMin.g * num11 + dirtRockColorMax.g * num10), (dirtColorMin.b * num11 + dirtRockColorMax.b * num10));
         }
-        const RockGradient: Color[] = Array(TileLookupUtil.maxRockGradients);
+        const RockGradient: Color[] = Array(this.maxRockGradients);
         let rockColorMin = new Color(74, 67, 60);
         dirtRockColorMax = new Color(53, 70, 97);
         for (let num12 = 0; num12 < RockGradient.length; num12++) {
@@ -1394,238 +1395,137 @@ export class TileLookupUtil {
         }
         let color10 = new Color(50, 44, 38);
         let colorCount = 0;
-        TileLookupUtil.tileOptionCounts = Array(TileID.Count);
+        this.tileOptionCounts = Array(TileID.Count);
         for (let num16 = 0; num16 < TileID.Count; num16++) {
             let array8 = tileColors[num16];
             let num17;
             for (num17 = 0; num17 < 12 && !(!array8[num17] || (array8[num17] === Color.transparent)); num17++) {
             }
-            TileLookupUtil.tileOptionCounts[num16] = num17;
+            this.tileOptionCounts[num16] = num17;
             colorCount += num17;
         }
-        TileLookupUtil.wallOptionCounts = Array(WallID.Count);
+        this.wallOptionCounts = Array(WallID.Count);
         for (let num18 = 0; num18 < WallID.Count; num18++) {
             let array9 = wallColors[num18];
             let num19;
             for (num19 = 0; num19 < 2 && !(!array9[num19] || (array9[num19] === Color.transparent)); num19++) {
             }
-            TileLookupUtil.wallOptionCounts[num18] = num19;
+            this.wallOptionCounts[num18] = num19;
             colorCount += num19;
         }
         colorCount += 774;
-        TileLookupUtil.colorLookup = Array(colorCount);
-        TileLookupUtil.colorLookup[0] = Color.transparent;
-        let lookupIndex = (TileLookupUtil.tilePosition = 1);
-        TileLookupUtil.tileLookup = Array(TileID.Count);
-        TileLookupUtil.idLookup = Array(TileID.Count);
-        TileLookupUtil.optionLookup = Array(TileID.Count);
+        this.colorLookup = Array(colorCount);
+        this.colorLookup[0] = Color.transparent;
+        let lookupIndex = (this.tilePosition = 1);
+        this.tileLookup = Array(TileID.Count);
+        this.idLookup = Array(TileID.Count);
+        this.optionLookup = Array(TileID.Count);
         for (let i = 0; i < TileID.Count; i++) {
-            if (TileLookupUtil.tileOptionCounts[i] > 0) {
+            if (this.tileOptionCounts[i] > 0) {
                 let _ = tileColors[i];
-                TileLookupUtil.tileLookup[i] = lookupIndex;
-                for (let j = 0; j < TileLookupUtil.tileOptionCounts[i]; j++) {
-                    TileLookupUtil.colorLookup[lookupIndex] = tileColors[i][j];
-                    TileLookupUtil.idLookup[lookupIndex] = i;
-                    TileLookupUtil.optionLookup[lookupIndex] = j;
+                this.tileLookup[i] = lookupIndex;
+                for (let j = 0; j < this.tileOptionCounts[i]; j++) {
+                    this.colorLookup[lookupIndex] = tileColors[i][j];
+                    this.idLookup[lookupIndex] = i;
+                    this.optionLookup[lookupIndex] = j;
                     lookupIndex++;
                 }
             }
             else {
-                TileLookupUtil.tileLookup[i] = 0;
+                this.tileLookup[i] = 0;
             }
         }
-        TileLookupUtil.wallPosition = lookupIndex;
-        TileLookupUtil.wallLookup = Array(WallID.Count);
-        TileLookupUtil.wallRangeStart = lookupIndex;
+        this.wallPosition = lookupIndex;
+        this.wallLookup = Array(WallID.Count);
+        this.wallRangeStart = lookupIndex;
         for (let i = 0; i < WallID.Count; i++) {
-            if (TileLookupUtil.wallOptionCounts[i] > 0) {
+            if (this.wallOptionCounts[i] > 0) {
                 let _ = wallColors[i];
-                TileLookupUtil.wallLookup[i] = lookupIndex;
-                for (let j = 0; j < TileLookupUtil.wallOptionCounts[i]; j++) {
-                    TileLookupUtil.colorLookup[lookupIndex] = wallColors[i][j];
-                    TileLookupUtil.idLookup[lookupIndex] = i;
-                    TileLookupUtil.optionLookup[lookupIndex] = j;
+                this.wallLookup[i] = lookupIndex;
+                for (let j = 0; j < this.wallOptionCounts[i]; j++) {
+                    this.colorLookup[lookupIndex] = wallColors[i][j];
+                    this.idLookup[lookupIndex] = i;
+                    this.optionLookup[lookupIndex] = j;
                     lookupIndex++;
                 }
             }
             else {
-                TileLookupUtil.wallLookup[i] = 0;
+                this.wallLookup[i] = 0;
             }
         }
-        TileLookupUtil.wallRangeEnd = lookupIndex;
-        TileLookupUtil.liquidPosition = lookupIndex;
+        this.wallRangeEnd = lookupIndex;
+        this.liquidPosition = lookupIndex;
         for (let i = 0; i < 4; i++) {
-            TileLookupUtil.colorLookup[lookupIndex] = liquidColors[i];
-            TileLookupUtil.idLookup[lookupIndex] = i;
+            this.colorLookup[lookupIndex] = liquidColors[i];
+            this.idLookup[lookupIndex] = i;
             lookupIndex++;
         }
-        TileLookupUtil.skyPosition = lookupIndex;
+        this.skyPosition = lookupIndex;
         for (let i = 0; i < 256; i++) {
-            TileLookupUtil.colorLookup[lookupIndex] = skyGradient[i];
+            this.colorLookup[lookupIndex] = skyGradient[i];
             lookupIndex++;
         }
-        TileLookupUtil.dirtPosition = lookupIndex;
+        this.dirtPosition = lookupIndex;
         for (let i = 0; i < 256; i++) {
-            TileLookupUtil.colorLookup[lookupIndex] = dirtGradient[i];
+            this.colorLookup[lookupIndex] = dirtGradient[i];
             lookupIndex++;
         }
-        TileLookupUtil.rockPosition = lookupIndex;
+        this.rockPosition = lookupIndex;
         for (let i = 0; i < 256; i++) {
-            TileLookupUtil.colorLookup[lookupIndex] = RockGradient[i];
+            this.colorLookup[lookupIndex] = RockGradient[i];
             lookupIndex++;
         }
-        TileLookupUtil.hellPosition = lookupIndex;
-        TileLookupUtil.colorLookup[lookupIndex] = color10;
-        TileLookupUtil.snowTypes = Array(6);
-        TileLookupUtil.snowTypes[0] = TileLookupUtil.tileLookup[147];
-        TileLookupUtil.snowTypes[1] = TileLookupUtil.tileLookup[161];
-        TileLookupUtil.snowTypes[2] = TileLookupUtil.tileLookup[162];
-        TileLookupUtil.snowTypes[3] = TileLookupUtil.tileLookup[163];
-        TileLookupUtil.snowTypes[4] = TileLookupUtil.tileLookup[164];
-        TileLookupUtil.snowTypes[5] = TileLookupUtil.tileLookup[200];
+        this.hellPosition = lookupIndex;
+        this.colorLookup[lookupIndex] = color10;
+        this.snowTypes = Array(6);
+        this.snowTypes[0] = this.tileLookup[147];
+        this.snowTypes[1] = this.tileLookup[161];
+        this.snowTypes[2] = this.tileLookup[162];
+        this.snowTypes[3] = this.tileLookup[163];
+        this.snowTypes[4] = this.tileLookup[164];
+        this.snowTypes[5] = this.tileLookup[200];
+
+        this.paintLookup = Array(32);
+        this.paintLookup[PaintID.RedPaint]     = this.paintLookup[PaintID.DeepRedPaint]     = new Color(255, 0, 0);
+        this.paintLookup[PaintID.OrangePaint]  = this.paintLookup[PaintID.DeepOrangePaint]  = new Color(255, 127, 0);
+        this.paintLookup[PaintID.YellowPaint]  = this.paintLookup[PaintID.DeepYellowPaint]  = new Color(255, 255, 0);
+        this.paintLookup[PaintID.LimePaint]    = this.paintLookup[PaintID.DeepLimePaint]    = new Color(127, 255, 0);
+        this.paintLookup[PaintID.GreenPaint]   = this.paintLookup[PaintID.DeepGreenPaint]   = new Color(0, 255, 0);
+        this.paintLookup[PaintID.TealPaint]    = this.paintLookup[PaintID.DeepTealPaint]    = new Color(0, 255, 127);
+        this.paintLookup[PaintID.CyanPaint]    = this.paintLookup[PaintID.DeepCyanPaint]    = new Color(0, 255, 255);
+        this.paintLookup[PaintID.SkyBluePaint] = this.paintLookup[PaintID.DeepSkyBluePaint] = new Color(0, 127, 255);
+        this.paintLookup[PaintID.BluePaint]    = this.paintLookup[PaintID.DeepBluePaint]    = new Color(0, 0, 255);
+        this.paintLookup[PaintID.PurplePaint]  = this.paintLookup[PaintID.DeepPurplePaint]  = new Color(127, 0, 255);
+        this.paintLookup[PaintID.VioletPaint]  = this.paintLookup[PaintID.DeepVioletPaint]  = new Color(255, 0, 255);
+        this.paintLookup[PaintID.PinkPaint]    = this.paintLookup[PaintID.DeepPinkPaint]    = new Color(255, 0, 127);
+        this.paintLookup[PaintID.BlackPaint] = new Color(75, 75, 75);
+        this.paintLookup[PaintID.WhitePaint] = new Color(255, 255, 255);
+        this.paintLookup[PaintID.GrayPaint] = new Color(175, 175, 175);
+        this.paintLookup[PaintID.BrownPaint] = new Color(255, 178, 125);
+        this.paintLookup[PaintID.ShadowPaint] = new Color(25, 25, 25);
+        this.paintLookup[PaintID.NegativePaint] = new Color(200, 200, 200, 150);
+        this.paintLookup[PaintID.IlluminantPaint] = new Color(255, 255, 255);
     }
 
-    public static paintColor(color: number) {
-        const white = Color.white;
-        if (color == 1 || color == 13) {
-            white.r = 255;
-            white.g = 0;
-            white.b = 0;
-        }
-        if (color == 2 || color == 14) {
-            white.r = 255;
-            white.g = 127;
-            white.b = 0;
-        }
-        if (color == 3 || color == 15) {
-            white.r = 255;
-            white.g = 255;
-            white.b = 0;
-        }
-        if (color == 4 || color == 16) {
-            white.r = 127;
-            white.g = 255;
-            white.b = 0;
-        }
-        if (color == 5 || color == 17) {
-            white.r = 0;
-            white.g = 255;
-            white.b = 0;
-        }
-        if (color == 6 || color == 18) {
-            white.r = 0;
-            white.g = 255;
-            white.b = 127;
-        }
-        if (color == 7 || color == 19) {
-            white.r = 0;
-            white.g = 255;
-            white.b = 255;
-        }
-        if (color == 8 || color == 20) {
-            white.r = 0;
-            white.g = 127;
-            white.b = 255;
-        }
-        if (color == 9 || color == 21) {
-            white.r = 0;
-            white.g = 0;
-            white.b = 255;
-        }
-        if (color == 10 || color == 22) {
-            white.r = 127;
-            white.g = 0;
-            white.b = 255;
-        }
-        if (color == 11 || color == 23) {
-            white.r = 255;
-            white.g = 0;
-            white.b = 255;
-        }
-        if (color == 12 || color == 24) {
-            white.r = 255;
-            white.g = 0;
-            white.b = 127;
-        }
-        if (color == 25) {
-            white.r = 75;
-            white.g = 75;
-            white.b = 75;
-        }
-        if (color == 26) {
-            white.r = 255;
-            white.g = 255;
-            white.b = 255;
-        }
-        if (color == 27) {
-            white.r = 175;
-            white.g = 175;
-            white.b = 175;
-        }
-        if (color == 28) {
-            white.r = 255;
-            white.g = 178;
-            white.b = 125;
-        }
-        if (color == 29) {
-            white.r = 25;
-            white.g = 25;
-            white.b = 25;
-        }
-        if (color == 30) {
-            white.r = 200;
-            white.g = 200;
-            white.b = 200;
-            white.a = 150;
-        }
-        return white;
-    }
-
-    public static mapColor(type: number, oldColor: Color, colorType: number) {
-        const color = TileLookupUtil.paintColor(colorType);
-        let max = oldColor.r / 255;
-        let mid = oldColor.g / 255;
-        let min = oldColor.b / 255;
-        if (mid > max) {
-            let swap = max;
-            max = mid;
-            mid = swap;
-        }
-        if (min > max) {
-            let swap = max;
-            max = min;
-            min = swap;
-        }
-        switch (colorType) {
-            case 29:
-                const num7 = min * 0.3;
-                oldColor.r = color.r * num7;
-                oldColor.g = color.g * num7;
-                oldColor.b = color.b * num7;
-                break;
-            case 30:
-                if (type >= TileLookupUtil.wallRangeStart && type <= TileLookupUtil.wallRangeEnd) {
-                    oldColor.r = (255 - oldColor.r) * 0.5;
-                    oldColor.g = (255 - oldColor.g) * 0.5;
-                    oldColor.b = (255 - oldColor.b) * 0.5;
-                }
-                else {
-                    oldColor.r = 255 - oldColor.r;
-                    oldColor.g = 255 - oldColor.g;
-                    oldColor.b = 255 - oldColor.b;
-                }
-                break;
-            default:
-                const num6 = max;
-                oldColor.r = color.r * num6;
-                oldColor.g = color.g * num6;
-                oldColor.b = color.b * num6;
-                break;
-        }
-    }
-
-    public static getMapTileXnaColor(tile: MapTile) {
+    public static getTileColor(tile: MapTile) {
         return TileLookupUtil.colorLookup[tile.type] || Color.globalBlack;
+    }
+
+    public static applyPaint(type: number, color: Color, paintId: PaintID) {
+        if (paintId === PaintID.NegativePaint) {
+            if (type >= TileLookupUtil.wallRangeStart && type <= TileLookupUtil.wallRangeEnd) {
+                return new Color((255 - color.r) * 0.5, (255 - color.g) * 0.5, (255 - color.b) * 0.5)
+            }
+            else {
+                return new Color(255 - color.r, 255 - color.g, 255 - color.b)
+            }
+        }
+        const paintColor = TileLookupUtil.paintLookup[paintId] || Color.globalWhite;
+        const r = color.r / 255;
+        const g = color.g / 255;
+        const b = color.b / 255;
+        const factor = paintId === PaintID.ShadowPaint ? Math.min(r, g, b) * 0.3 : Math.max(r, g, b);
+        return new Color(paintColor.r * factor, paintColor.g * factor, paintColor.b * factor);
     }
 
     public static getMapAirTile(y: number, worldSurface: number) {

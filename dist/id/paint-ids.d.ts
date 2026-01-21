@@ -30,6 +30,5 @@ export declare enum PaintID {
     BrownPaint = 28,
     ShadowPaint = 29,
     NegativePaint = 30,
-    IlluminantPaint = 31,
-    Old_IlluminantPaint = 31
+    IlluminantPaint = 31
 }

@@ -23,4 +23,5 @@ export class Color {
     static get transparent() { return new Color(0, 0, 0, 0) };
 
     static readonly globalBlack = Color.black;
+    static readonly globalWhite = Color.white;
 }

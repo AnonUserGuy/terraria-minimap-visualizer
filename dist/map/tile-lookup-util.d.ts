@@ -1,5 +1,6 @@
 import { Color } from "../net/xna-color.js";
 import { MapTile } from "./map-tile.js";
+import { PaintID } from "../id/paint-ids.js";
 export declare class TileLookupUtil {
     static lastestRelease: number;
     static maxLiquidTypes: number;
@@ -23,8 +24,8 @@ export declare class TileLookupUtil {
     static wallOptionCounts: number[];
     static idLookup: number[];
     static optionLookup: number[];
-    static paintColor(color: number): Color;
-    static mapColor(type: number, oldColor: Color, colorType: number): void;
-    static getMapTileXnaColor(tile: MapTile): Color;
+    static paintLookup: Color[];
+    static getTileColor(tile: MapTile): Color;
+    static applyPaint(type: number, color: Color, paintId: PaintID): Color;
     static getMapAirTile(y: number, worldSurface: number): number;
 }

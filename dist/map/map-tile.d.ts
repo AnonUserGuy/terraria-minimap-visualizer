@@ -1,3 +1,6 @@
+import { PaintID } from "../id/paint-ids.js";
+import { TileID } from "../id/tile-ids.js";
+import { WallID } from "../id/wall-ids.js";
 export declare enum TileGroup {
     Empty = 0,
     Tile = 1,
@@ -11,19 +14,17 @@ export declare enum TileGroup {
 export declare class MapTile {
     type: number;
     light: number;
-    private _extraData;
+    paint: PaintID;
     group: number;
-    id: number | undefined;
+    id: TileID | WallID | undefined;
     option: number | undefined;
     static air: MapTile;
     static shadowDirt: MapTile;
     static anyWall: MapTile;
-    constructor(type: number, light: number, extraData: number, group: number, id: number | undefined, option: number | undefined);
-    get color(): number;
-    set color(value: number);
-    getXnaColor(): import("../net/xna-color.js").Color;
-    withLight(light: number): MapTile;
-    static create(type: number, light: number, color: number, group: number, id?: number | undefined, option?: number | undefined): MapTile;
+    constructor(type: number, light: number, paint: number, group: number, id?: number | undefined, option?: number | undefined);
+    getColor(): import("../net/xna-color.js").Color;
+    getColorPainted(): import("../net/xna-color.js").Color;
+    copyWithLight(light: number): MapTile;
     equals(other: MapTile): boolean;
     equalsAfterExport(other: MapTile): boolean;
     equalsWithoutLight(other: MapTile): boolean;
