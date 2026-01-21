@@ -9,7 +9,7 @@ var FileType;
     FileType[FileType["World"] = 2] = "World";
     FileType[FileType["Player"] = 3] = "Player";
 })(FileType || (FileType = {}));
-class OldMapHelper {
+class OldMapReader {
     constructor() {
         this.misc = 0;
         this.misc2 = 0;
@@ -124,7 +124,7 @@ export class MapReader {
         worldMap.worldSurfaceEstimated = true;
         worldMap.worldSurface = MapReader.estimateWorldSurface(worldMap.height);
         const underworldLayer = MapReader.estimateUnderworldLayer(worldMap.height);
-        const oldMapHelper = new OldMapHelper();
+        const oldMapHelper = new OldMapReader();
         for (let x = 0; x < worldMap.width; x++) {
             for (let y = 0; y < worldMap.height; y++) {
                 if (fileIO.readBoolean()) {

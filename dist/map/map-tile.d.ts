@@ -22,8 +22,8 @@ export declare class MapTile {
     static shadowDirt: MapTile;
     static anyWall: MapTile;
     constructor(type: number, light: number, paint: number, group: number, id?: number | undefined, option?: number | undefined);
-    getColor(): import("../net/xna-color.js").Color;
-    getColorPainted(): import("../net/xna-color.js").Color;
+    getColor(): import("../net/color.js").Color;
+    getColorPainted(): import("../net/color.js").Color;
     copyWithLight(light: number): MapTile;
     equals(other: MapTile): boolean;
     equalsAfterExport(other: MapTile): boolean;

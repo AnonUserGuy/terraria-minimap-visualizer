@@ -1,4 +1,4 @@
-import { Color } from "../net/xna-color.js";
+import { Color } from "../net/color.js";
 import { MapTile } from "./map-tile.js";
 import { PaintID } from "../id/paint-ids.js";
 export declare class TileLookupUtil {

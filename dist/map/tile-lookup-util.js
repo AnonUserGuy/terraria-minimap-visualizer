@@ -1,5 +1,5 @@
 var _a;
-import { Color } from "../net/xna-color.js";
+import { Color } from "../net/color.js";
 import { TileID } from "../id/tile-ids.js";
 import { WallID } from "../id/wall-ids.js";
 import { PaintID } from "../id/paint-ids.js";
