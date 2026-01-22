@@ -1,17 +1,20 @@
 import { BinaryWriter } from "../net/binary-writer.js";
 import { TileData } from "../data/tile-data.js";
 import { TileID } from "../id/tile-ids.js";
-import { TileLookupUtil } from "../map/tile-lookup-util.js";
 import { WorldMap } from "../map/world-map.js";
-import { MapTile, TileGroup } from "../map/map-tile.js";
+import { MapCell, MapCellGroup } from "../map/cell/map-cell.js";
 import { PaintID } from "../id/paint-ids.js";
+import { MapWall } from "../map/cell/map-wall.js";
+import { MapTile } from "../map/cell/map-tile.js";
+import { LiquidID } from "../id/liquid-ids.js";
+import { VersionData } from "../data/version-data.js";
 
 export class SchematicWriter {
     
     // largely adapted from Terraria-Map-Editor/src/TEdit.Editor/Clipboard/ClipboardBuffer.File.cs -> ClipboardBuffer.SaveV4
     static writeSchematic(bw: BinaryWriter, worldMap: WorldMap) {
         bw.writeString(worldMap.worldName!);
-        bw.writeInt32(TileLookupUtil.lastestRelease + 10000);
+        bw.writeInt32(VersionData.latestRelease + 10000);
         bw.writeBitArray(TileData.frameImportant);
         bw.writeInt32(worldMap.width);
         bw.writeInt32(worldMap.height);
@@ -29,7 +32,7 @@ export class SchematicWriter {
         bw.writeInt32(0); // count
 
         bw.writeString(worldMap.worldName!);
-        bw.writeInt32(TileLookupUtil.lastestRelease);
+        bw.writeInt32(VersionData.latestRelease);
         bw.writeInt32(worldMap.width);
         bw.writeInt32(worldMap.height);
     }
@@ -38,21 +41,21 @@ export class SchematicWriter {
     static writeTiles(bw: BinaryWriter, worldMap: WorldMap) {
         const u: number[] = [];
         const v: number[] = [];
-        let lastWall = MapTile.anyWall;
+        let lastWall = MapWall.anyWall;
 
         for (let x = 0; x < worldMap.width; x++) {
             for (let y = 0; y < worldMap.height; y++) {
                 const i = y * worldMap.width + x;
-                const tile = worldMap.tiles[i] || MapTile.shadowDirt;
+                const tile = worldMap.cells[i] || MapTile.shadowDirt;
                 let needsWall = false;
                 if (tile !== MapTile.shadowDirt) {
-                    if (tile.group === TileGroup.Tile && TileData.frameImportant[tile.id!]) {
-                        this.getTileUV(worldMap, tile, x, y, u, v);
-                        if (tile.id! === TileID.Torches) {
+                    if (tile.group === MapCellGroup.Tile && TileData.frameImportant[tile.id!]) {
+                        this.getTileUV(worldMap, tile as MapTile, x, y, u, v);
+                        if (tile.id === TileID.Torches) {
                             needsWall = this.needsWall(worldMap, x, y);
                         }
-                    } else if (tile.group === TileGroup.Wall) {
-                        lastWall = tile;
+                    } else if (tile.group === MapCellGroup.Wall) {
+                        lastWall = tile as MapWall;
                     }
                 }
 
@@ -63,14 +66,12 @@ export class SchematicWriter {
                 let header1 = tileData[headerIndex];
 
                 let rle = 0;
-                if (tile.id !== 520 && tile.id !== 423) {
-                    let y2 = y + 1;
-                    let i2 = y2 * worldMap.width + x;
-                    while (y2 < worldMap.height && tile.equalsAfterExport(worldMap.tile(x, y2) || MapTile.shadowDirt) && (tile.group !== TileGroup.Tile || !TileData.frameImportant[tile.id!] || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
-                        rle++;
-                        y2++;
-                        i2 = y2 * worldMap.width + x;
-                    }
+                let y2 = y + 1;
+                let i2 = y2 * worldMap.width + x;
+                while (y2 < worldMap.height && tile.equalsAfterExport(worldMap.cell(x, y2) || MapTile.shadowDirt) && (tile.group !== MapCellGroup.Tile || !TileData.frameImportant[tile.id] || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
+                    rle++;
+                    y2++;
+                    i2 = y2 * worldMap.width + x;
                 }
                 y += rle;
 
@@ -91,14 +92,14 @@ export class SchematicWriter {
     }
 
     // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SerializeTileData
-    static serializeTileData(tile: MapTile, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapTile) {
+    static serializeTileData(tile: MapCell, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapWall) {
         const tileData = new Uint8Array(16);
         let dataIndex = 4;
 
         let header3 = 0;
         let header2 = 0;
         let header1 = 0;
-        if (tile.group === TileGroup.Tile) {
+        if (tile.group === MapCellGroup.Tile) {
             header1 |= 0b0000_0010;
             tileData[dataIndex++] = tile.id! & 0xFF;
             if (tile.id! > 255) {
@@ -113,9 +114,9 @@ export class SchematicWriter {
                 tileData[dataIndex++] = ((v! & 0xFF00) >> 8); // high byte
             }
 
-            if (tile.paint !== PaintID.None) {
+            if ((tile as MapTile).paint !== PaintID.None) {
                 header3 |= 0b0000_1000;
-                tileData[dataIndex++] = tile.paint;
+                tileData[dataIndex++] = (tile as MapTile).paint;
             }
 
             if (needsWall) {
@@ -127,24 +128,23 @@ export class SchematicWriter {
                     tileData[dataIndex++] = wall.paint;
                 }
             }
-        } else if (tile.group === TileGroup.Wall) {
+        } else if (tile.group === MapCellGroup.Wall) {
             header1 |= 0b0000_0100;
             tileData[dataIndex++] = tile.id! & 0xFF;
 
-            if (tile.paint !== PaintID.None) {
+            if ((tile as MapWall).paint !== PaintID.None) {
                 header3 |= 0b0001_0000;
-                tileData[dataIndex++] = tile.paint;
+                tileData[dataIndex++] = (tile as MapWall).paint;
             }
-        } else if (tile.group >= TileGroup.Water && tile.group <= TileGroup.Honey) {
-            if (tile.group === TileGroup.Water) {
+        } else if (tile.group >= MapCellGroup.Liquid) {
+            if (tile.id === LiquidID.Water) {
                 header1 |= 0b0000_1000;
-                if (tile.id === 3) { // shimmer
-                    header3 |= 0b1000_0000;
-                }
-            } else if (tile.group === TileGroup.Lava) {
+            } else if (tile.id === LiquidID.Lava) {
                 header1 |= 0b0001_0000;
-            } else { // honey
+            } else if (tile.id === LiquidID.Honey) {
                 header1 |= 0b0001_1000;
+            } else { // shimmer
+                header3 |= 0b1000_0000;
             }
             tileData[dataIndex++] = 255;
         }
@@ -164,22 +164,22 @@ export class SchematicWriter {
 
     static getTileUV(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
         const i = y * worldMap.width + x;
-        if (TileData.tree[tile.id!]) {
+        if (TileData.tree[tile.id]) {
             this.resolveTree(worldMap, x, y, u, v);
-        } else if (tile.id! === TileID.Stalactite) {
+        } else if (tile.id === TileID.Stalactite) {
             this.resolveStalactite(worldMap, x, y, v);
-        } else if (tile.id! === TileID.PlantDetritus) {
+        } else if (tile.id === TileID.PlantDetritus) {
             this.resolvePlantDetritus(worldMap, x, y, u, v);
         } else {
             this.resolveWidth(worldMap, x, y, u);
             this.resolveHeight(worldMap, x, y, v);
         }
-        const { frameX, frameY } = this.getFrameFromBaseOption(tile.id!, tile.option!);
+        const { frameX, frameY } = this.getTileUVFromOption(tile.id, tile.option);
         u[i] = (u[i] || 0) + frameX;
         v[i] = (v[i] || 0) + frameY;
     }
 
-    static getFrameFromBaseOption(tileType: number, baseOption: number) {
+    static getTileUVFromOption(tileType: number, baseOption: number) {
         const tileCache = {
             frameX: 0,
             frameY: 0
@@ -314,9 +314,6 @@ export class SchematicWriter {
                 if (baseOption === 1) {
                     tileCache.frameX = 28;
                 }
-                break;
-            case TileID.HolidayLights:
-                // position dependent
                 break;
             case TileID.Stalactite:
                 tileCache.frameX = baseOption * 52;
@@ -523,13 +520,13 @@ export class SchematicWriter {
 
     static resolveWidth(worldMap: WorldMap, x: number, y: number, u: number[]) {
         const i = y * worldMap.width + x;
-        const tile = worldMap.tiles[i];
+        const tile = worldMap.cells[i];
         if (tile.id! in TileData.width) {
             if (x === 0) {
                 u[i] = 0;
             } else {
                 const i2 = y * worldMap.width + x - 1;
-                const tileR = worldMap.tiles[i2];
+                const tileR = worldMap.cells[i2];
                 if (tileR && tileR.id! === tile.id) {
                     u[i] = (u[i2] + 18) % (18 * TileData.width[tile.id]);
                 } else {
@@ -541,13 +538,13 @@ export class SchematicWriter {
 
     static resolveHeight(worldMap: WorldMap, x: number, y: number, v: number[]) {
         const i = y * worldMap.width + x;
-        const tile = worldMap.tiles[i];
+        const tile = worldMap.cells[i];
         if (tile.id! in TileData.height) {
             if (y === 0) {
                 v[i] = 0;
             } else {
                 const i2 = (y - 1) * worldMap.width + x;
-                const tileU = worldMap.tiles[i2];
+                const tileU = worldMap.cells[i2];
                 if (tileU && tileU.id! === tile.id) {
                     v[i] = (v[i2] + 18) % (18 * TileData.height[tile.id]);
                 } else {
@@ -664,8 +661,8 @@ export class SchematicWriter {
     }
 
     static treeAt(worldMap: WorldMap, x: number, y: number) {
-        const tile = worldMap.tile(x, y);
-        return tile && tile.group === TileGroup.Tile && TileData.tree[tile.id!];
+        const tile = worldMap.cell(x, y);
+        return tile && tile.group === MapCellGroup.Tile && TileData.tree[tile.id!];
     }
 
     static resolveStalactite(worldMap: WorldMap, x: number, y: number, v: number[]) {
@@ -699,8 +696,8 @@ export class SchematicWriter {
     }
 
     static stalactiteAt(worldMap: WorldMap, x: number, y: number) {
-        const tile = worldMap.tile(x, y);
-        return tile && tile.group === TileGroup.Tile && tile.id === TileID.Stalactite;
+        const tile = worldMap.cell(x, y);
+        return tile && tile.group === MapCellGroup.Tile && tile.id === TileID.Stalactite;
     }
 
     static resolvePlantDetritus(worldMap: WorldMap, x: number, y: number, u: number[], v: number[]) {
@@ -760,13 +757,13 @@ export class SchematicWriter {
     }
 
     static plantDetritusAt(worldMap: WorldMap, x: number, y: number) {
-        const tile = worldMap.tile(x, y);
-        return tile && tile.group === TileGroup.Tile && tile.id === TileID.PlantDetritus;
+        const tile = worldMap.cell(x, y);
+        return tile && tile.group === MapCellGroup.Tile && tile.id === TileID.PlantDetritus;
     }
 
     static solidAt(worldMap: WorldMap, x: number, y: number) {
-        const tile = worldMap.tile(x, y);
-        return tile && tile.group === TileGroup.Tile && TileData.solid[tile.id!];
+        const tile = worldMap.cell(x, y);
+        return tile && tile.group === MapCellGroup.Tile && TileData.solid[tile.id!];
     }
 
     static needsWall(worldMap: WorldMap, x: number, y: number) {

@@ -31,4 +31,5 @@ export enum PaintID {
 	ShadowPaint = 29,
 	NegativePaint = 30,
 	IlluminantPaint = 31,
+	Count = 32
 }

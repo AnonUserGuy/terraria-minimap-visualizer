@@ -1,6 +1,7 @@
 import { PaintID } from "../id/paint-ids.js";
 import { Color } from "../net/color.js";
-import { MapTile, TileGroup } from "./map-tile.js";
+import { MapCellPaintable } from "./cell/map-cell-paintable.js";
+import { MapCell, MapCellGroup } from "./cell/map-cell.js";
 import { WorldMap } from "./world-map.js";
 
 export class WorldMapCanvas extends WorldMap {
@@ -63,6 +64,11 @@ export class WorldMapCanvas extends WorldMap {
         this.isDrawnAccurate = false;
     }
 
+    public async read(data: (Uint8Array | ArrayBuffer)) {
+        await super.read(data);
+        this.drawLayers();
+    }
+
     public drawFast(layersActive: boolean[]) {
         const ctxOutput = this.canvasOutput.getContext("2d")!;
         ctxOutput.clearRect(0, 0, this._width, this._height);
@@ -123,51 +129,48 @@ export class WorldMapCanvas extends WorldMap {
     private drawNormalLayers() {
         for (let y = 0; y < this._height; y++) {
             for (let x = 0; x < this._width;) {
-                const tile = this.tile(x, y);
-                if (!tile) {
+                const cell = this.cell(x, y);
+                if (!cell) {
                     x++;
                     continue;
                 }
 
                 let x2 = x + 1;
-                while (tile.equalsWithoutLight(this.tile(x2, y)) && x2 < this._width) {
+                while (cell.equalsWithoutLight(this.cell(x2, y)) && x2 < this._width) {
                     x2++;
                 }
 
-                this.drawTiles(x, y, x2 - x, 1, tile);
+                this.drawCells(x, y, x2 - x, 1, cell);
                 x = x2;
             }
         }
     }
 
-    private drawTiles(x: number, y: number, width: number, height: number, tile: MapTile) {
-        let color = tile.getColor();
+    private drawCells(x: number, y: number, width: number, height: number, cell: MapCell) {
+        let color = cell.getColor();
         let ctx: OffscreenCanvasRenderingContext2D;
-        switch (tile.group) {
-            case TileGroup.Air:
-            case TileGroup.DirtRock:
+        switch (cell.group) {
+            case MapCellGroup.Air:
                 ctx = this.canvasAir.getContext("2d")!;
                 break;
-            case TileGroup.Tile:
+            case MapCellGroup.Tile:
                 ctx = this.canvasTiles.getContext("2d")!;
-                if (tile.paint !== PaintID.None) {
-                    const color2 = tile.getColorPainted();
+                if ((cell as MapCellPaintable).paint !== PaintID.None) {
+                    const color2 = cell.getColorPainted();
                     const ctx2 = this.canvasTilesPainted.getContext("2d")!;
                     this.drawColor(x, y, width, height, ctx2, color2);
                 }
                 break;
-            case TileGroup.Wall:
+            case MapCellGroup.Wall:
                 ctx = this.canvasWalls.getContext("2d")!;
                 this.drawColor(x, y, width, height, ctx, color);
-                if (tile.paint !== PaintID.None) {
-                    const color2 = tile.getColorPainted();
+                if ((cell as MapCellPaintable).paint !== PaintID.None) {
+                    const color2 = cell.getColorPainted();
                     const ctx2 = this.canvasWallsPainted.getContext("2d")!;
                     this.drawColor(x, y, width, height, ctx2, color2);
                 }
                 break;
-            case TileGroup.Water:
-            case TileGroup.Lava:
-            case TileGroup.Honey:
+            case MapCellGroup.Liquid:
                 ctx = this.canvasLiquids.getContext("2d")!;
                 break;
         }
@@ -182,20 +185,20 @@ export class WorldMapCanvas extends WorldMap {
     private drawLightingLayer() {
         for (let y = 0; y < this._height; y++) {
             for (let x = 0; x < this._width;) {
-                const tile = this.tile(x, y);
-                if (!tile) {
+                const cell = this.cell(x, y);
+                if (!cell) {
                     x++;
                     continue;
                 }
 
                 let x2 = x + 1;
-                let other = this.tile(x2, y);
-                while (other && tile.light === other.light && x2 < this._width) {
+                let other = this.cell(x2, y);
+                while (other && cell.light === other.light && x2 < this._width) {
                     x2++;
-                    other = this.tile(x2, y);
+                    other = this.cell(x2, y);
                 }
 
-                this.drawLighting(x, y, x2 - x, 1, tile.light);
+                this.drawLighting(x, y, x2 - x, 1, cell.light);
                 x = x2;
             }
         }
@@ -219,11 +222,6 @@ export class WorldMapCanvas extends WorldMap {
         this.eraseCanvases(ctx, layersOpaque);
 
         ctx.globalCompositeOperation = "source-over";
-    }
-
-    public async read(data: (Uint8Array | ArrayBuffer)) {
-        await super.read(data);
-        this.drawLayers();
     }
 
     private blendImageData(dst: ImageData, src: ImageData) {

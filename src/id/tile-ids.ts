@@ -692,5 +692,5 @@ export enum TileID {
 	XenonMossBlock = 690,
 	VioletMossBlock = 691,
 	RainbowMossBlock = 692,
-	Count = 693,
+	Count = 693
 }

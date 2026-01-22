@@ -1,18 +1,19 @@
-import { MapTile } from "./map-tile.js";
+import { MapCell } from "./cell/map-cell.js";
 export declare class WorldMap {
     protected _width: number;
     protected _height: number;
-    private airTilesDepths;
-    private airTiles;
-    tiles: MapTile[];
-    worldName?: string;
-    worldId?: number;
-    release?: number;
-    revision?: number;
-    isChinese?: boolean;
-    worldSurface?: number;
-    worldSurfaceEstimated?: boolean;
-    rockLayer?: number;
+    private skyDepths;
+    private sky;
+    cells: MapCell[];
+    worldName: string;
+    worldId: number;
+    release: number;
+    version: string;
+    revision: number;
+    isChinese: boolean;
+    worldSurface: number;
+    worldSurfaceEstimated: boolean;
+    rockLayer: number;
     constructor(width?: number, height?: number);
     get width(): number;
     set width(val: number);
@@ -20,10 +21,10 @@ export declare class WorldMap {
     set height(val: number);
     setDimensions(w: number, h: number): void;
     updateDimensions(): void;
-    setTile(x: number, y: number, tile: MapTile): void;
-    tile(x: number, y: number): MapTile;
-    private fixAirTiles;
+    setCell(x: number, y: number, tile: MapCell): void;
+    cell(x: number, y: number): MapCell;
+    private fixSky;
     read(data: (Uint8Array | ArrayBuffer)): Promise<void>;
+    isReleaseSafe(): boolean;
     writeSchematic(): ArrayBufferLike;
-    static getLatestRelease(): number;
 }

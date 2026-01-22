@@ -346,5 +346,5 @@ export enum WallID {
 	XenonMossBlockWall = 344,
 	VioletMossBlockWall = 345,
 	RainbowMossBlockWall = 346,
-	Count = 347,
+	Count = 347
 }

@@ -1,16 +1,18 @@
 import { BinaryWriter } from "../net/binary-writer.js";
 import { WorldMap } from "../map/world-map.js";
-import { MapTile } from "../map/map-tile.js";
+import { MapCell } from "../map/cell/map-cell.js";
+import { MapWall } from "../map/cell/map-wall.js";
+import { MapTile } from "../map/cell/map-tile.js";
 export declare class SchematicWriter {
     static writeSchematic(bw: BinaryWriter, worldMap: WorldMap): void;
     static writeTiles(bw: BinaryWriter, worldMap: WorldMap): void;
-    static serializeTileData(tile: MapTile, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapTile): {
+    static serializeTileData(tile: MapCell, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapWall): {
         tileData: Uint8Array<ArrayBuffer>;
         headerIndex: number;
         dataIndex: number;
     };
     static getTileUV(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]): void;
-    static getFrameFromBaseOption(tileType: number, baseOption: number): {
+    static getTileUVFromOption(tileType: number, baseOption: number): {
         frameX: number;
         frameY: number;
     };
