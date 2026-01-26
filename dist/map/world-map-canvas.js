@@ -1,9 +1,8 @@
-import { PaintID } from "../id/paint-ids.js";
 import { MapCellGroup } from "./cell/map-cell.js";
 import { WorldMap } from "./world-map.js";
 export class WorldMapCanvas extends WorldMap {
-    constructor(canvas) {
-        super(canvas.width, canvas.height);
+    constructor(mapData, canvas) {
+        super(mapData, canvas.width, canvas.height);
         this.canvasOutput = canvas;
         this.isDrawnAccurate = false;
         this.canvasLayers = [];
@@ -101,8 +100,25 @@ export class WorldMapCanvas extends WorldMap {
             }
         }
     }
+    redrawAirLayer() {
+        for (let y = 0; y < this._height; y++) {
+            for (let x = 0; x < this._width;) {
+                const cell = this.cell(x, y);
+                if (!cell || cell.group !== MapCellGroup.Air) {
+                    x++;
+                    continue;
+                }
+                let x2 = x + 1;
+                while (cell.equalsWithoutLight(this.cell(x2, y)) && x2 < this._width) {
+                    x2++;
+                }
+                this.drawCells(x, y, x2 - x, 1, cell);
+                x = x2;
+            }
+        }
+    }
     drawCells(x, y, width, height, cell) {
-        let color = cell.getColor();
+        let color = this.color(x, y);
         let ctx;
         switch (cell.group) {
             case MapCellGroup.Air:
@@ -110,8 +126,8 @@ export class WorldMapCanvas extends WorldMap {
                 break;
             case MapCellGroup.Tile:
                 ctx = this.canvasTiles.getContext("2d");
-                if (cell.paint !== PaintID.None) {
-                    const color2 = cell.getColorPainted();
+                if (cell.paint) {
+                    const color2 = this.mapData.applyPaint(cell.group, color, cell.paint);
                     const ctx2 = this.canvasTilesPainted.getContext("2d");
                     this.drawColor(x, y, width, height, ctx2, color2);
                 }
@@ -119,8 +135,8 @@ export class WorldMapCanvas extends WorldMap {
             case MapCellGroup.Wall:
                 ctx = this.canvasWalls.getContext("2d");
                 this.drawColor(x, y, width, height, ctx, color);
-                if (cell.paint !== PaintID.None) {
-                    const color2 = cell.getColorPainted();
+                if (cell.paint) {
+                    const color2 = this.mapData.applyPaint(cell.group, color, cell.paint);
                     const ctx2 = this.canvasWallsPainted.getContext("2d");
                     this.drawColor(x, y, width, height, ctx2, color2);
                 }
@@ -132,7 +148,7 @@ export class WorldMapCanvas extends WorldMap {
         this.drawColor(x, y, width, height, ctx, color);
     }
     drawColor(x, y, width, height, ctx, color) {
-        ctx.fillStyle = color.toString();
+        ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
         ctx.fillRect(x, y, width, height);
     }
     drawLightingLayer() {
@@ -170,6 +186,15 @@ export class WorldMapCanvas extends WorldMap {
         this.eraseCanvases(ctx, layersOpaque);
         ctx.globalCompositeOperation = "source-over";
     }
+    eraseCanvases(ctx, canvases) {
+        const out = ctx.getImageData(0, 0, this._width, this._height);
+        for (const canvas of canvases) {
+            const ctx2 = canvas.getContext("2d");
+            const img = ctx2.getImageData(0, 0, this._width, this._height);
+            this.eraseImageData(out, img);
+        }
+        ctx.putImageData(out, 0, 0);
+    }
     blendImageData(dst, src) {
         const d = dst.data;
         const s = src.data;
@@ -191,15 +216,6 @@ export class WorldMapCanvas extends WorldMap {
             d[i + 2] = ((s[i + 2] * saNorm + d[i + 2] * daNorm * (1 - saNorm)) * invOutA) | 0;
             d[i + 3] = (outA * 255) | 0;
         }
-    }
-    eraseCanvases(ctx, canvases) {
-        const out = ctx.getImageData(0, 0, this._width, this._height);
-        for (const canvas of canvases) {
-            const ctx2 = canvas.getContext("2d");
-            const img = ctx2.getImageData(0, 0, this._width, this._height);
-            this.eraseImageData(out, img);
-        }
-        ctx.putImageData(out, 0, 0);
     }
     eraseImageData(dst, src) {
         const d = dst.data;

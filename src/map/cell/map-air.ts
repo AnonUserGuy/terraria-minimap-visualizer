@@ -1,36 +1,24 @@
-import { MapCell, MapCellGroup } from "./map-cell";
-
-export enum MapAirDepth {
-    Sky,
-    Dirt,
-    Rock
-}
+import { MapCell, MapCellGroup } from "./map-cell.js";
 
 export class MapAir extends MapCell {
-    public depth: MapAirDepth;
 
-    constructor(light: number, id: number, depth: MapAirDepth) {
+    constructor(light: number, id: number) {
         super(light, MapCellGroup.Air, id);
-        this.depth = depth;
     }
 
     public copyWithLight(light: number) {
-        return new MapAir(light, this.id, this.depth);
+        return new MapAir(light, this.id);
     }
 
     public equals(other: MapAir) {
-        return !!other && this.light === other.light && this.group === other.group && this.id === other.id && this.depth === other.depth;
+        return !!other && this.light === other.light && this.group === other.group && this.id === other.id;
     }
 
     public equalsWithoutLight(other: MapAir) {
-        return !!other && this.group === other.group && this.id === other.id && this.depth === other.depth;
+        return !!other && this.group === other.group && this.id === other.id;
     }
 
-    public equalsAfterExport(other: MapCell) {
+    public equalsAfterExport(other: MapAir) {
         return !!other && this.group === other.group; // ids just visual for air cells
-    }
-
-    public toString() {
-        return `${super.toString()} - Air`;
     }
 }

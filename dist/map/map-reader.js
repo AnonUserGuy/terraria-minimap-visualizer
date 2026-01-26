@@ -1,11 +1,8 @@
-import { MapTile } from "./cell/map-tile.js";
-import { MapLiquid } from "./cell/map-liquid.js";
 import { LiquidID } from "../id/liquid-ids.js";
+import { MapTile } from "./cell/map-tile.js";
 import { MapWall } from "./cell/map-wall.js";
-import { MapAirSky } from "./cell/map-air-sky.js";
-import { MapAirDirt } from "./cell/map-air-dirt.js";
-import { MapAirRock } from "./cell/map-air-rock.js";
-import { mapCellColors } from "./map-cell-colors.js";
+import { MapLiquid } from "./cell/map-liquid.js";
+import { MapAir } from "./cell/map-air.js";
 var FileType;
 (function (FileType) {
     FileType[FileType["None"] = 0] = "None";
@@ -24,65 +21,53 @@ var MapCellGroupSerialized;
     MapCellGroupSerialized[MapCellGroupSerialized["Sky"] = 6] = "Sky";
     MapCellGroupSerialized[MapCellGroupSerialized["DirtRock"] = 7] = "DirtRock";
 })(MapCellGroupSerialized || (MapCellGroupSerialized = {}));
-class OldMapReader {
-    constructor() {
-        this.misc = 0;
-        this.misc2 = 0;
+class MapFlagsV1 {
+    constructor(flags) {
+        this.flags = flags;
     }
-    active() {
-        if ((this.misc & 1) == 1) {
-            return true;
-        }
-        return false;
+    get tile() {
+        return !!(this.flags & 1);
     }
-    water() {
-        if ((this.misc & 2) == 2) {
-            return true;
-        }
-        return false;
+    get water() {
+        return !!(this.flags & 2);
     }
-    lava() {
-        if ((this.misc & 4) == 4) {
-            return true;
-        }
-        return false;
+    get lava() {
+        return !!(this.flags & 4);
     }
-    honey() {
-        if ((this.misc2 & 0x40) == 64) {
-            return true;
-        }
-        return false;
+    get modified() {
+        return !!(this.flags & 8);
     }
-    changed() {
-        if ((this.misc & 8) == 8) {
-            return true;
-        }
-        return false;
+    get wall() {
+        return !!(this.flags & 16);
     }
-    wall() {
-        if ((this.misc & 0x10) == 16) {
-            return true;
-        }
-        return false;
+    get option() {
+        return (this.flags & 480) >> 5;
     }
-    option() {
-        let b = 0;
-        if ((this.misc & 0x20) == 32) {
-            b++;
-        }
-        if ((this.misc & 0x40) == 64) {
-            b += 2;
-        }
-        if ((this.misc & 0x80) == 128) {
-            b += 4;
-        }
-        if ((this.misc2 & 1) == 1) {
-            b += 8;
-        }
-        return b;
+    get paint() {
+        return (this.flags & 7680) >> 9;
     }
-    color() {
-        return ((this.misc2 & 0x1E) >> 1);
+    get honey() {
+        return !!(this.flags & 16384);
+    }
+}
+class MapFlagsV2 {
+    constructor(flags) {
+        this.flags = flags;
+    }
+    get hasPaint() {
+        return !!(this.flags & 1);
+    }
+    get group() {
+        return (this.flags & 14) >> 1;
+    }
+    get hasWideType() {
+        return !!(this.flags & 16);
+    }
+    get hasLight() {
+        return !!(this.flags & 32);
+    }
+    get repeatedWidth() {
+        return this.flags >> 6;
     }
 }
 export class MapReader {
@@ -91,9 +76,6 @@ export class MapReader {
     }
     static estimateRockLayer(worldHeight) {
         return Math.round(0.35 * worldHeight + 25);
-    }
-    static estimateUnderworldLayer(worldHeight) {
-        return Math.round(0.9 * worldHeight - 125);
     }
     static async read(fileIO, worldMap) {
         worldMap.release = fileIO.ReadInt32();
@@ -109,6 +91,7 @@ export class MapReader {
         const worldHeight = fileIO.ReadInt32();
         const worldWidth = fileIO.ReadInt32();
         worldMap.setDimensions(worldWidth, worldHeight);
+        worldMap.rockLayerEstimated = true;
         worldMap.rockLayer = MapReader.estimateRockLayer(worldHeight);
         if (worldMap.release <= 91) {
             MapReader.readMapV1(fileIO, worldMap);
@@ -138,62 +121,30 @@ export class MapReader {
     static readMapV1(fileIO, worldMap) {
         worldMap.worldSurfaceEstimated = true;
         worldMap.worldSurface = MapReader.estimateWorldSurface(worldMap.height);
-        const underworldLayer = MapReader.estimateUnderworldLayer(worldMap.height);
-        const oldMapHelper = new OldMapReader();
         for (let x = 0; x < worldMap.width; x++) {
             for (let y = 0; y < worldMap.height; y++) {
                 if (fileIO.readBoolean()) {
-                    let id = ((worldMap.release <= 77) ? fileIO.readByte() : fileIO.readUInt16());
+                    const id = ((worldMap.release <= 77) ? fileIO.readByte() : fileIO.readUInt16());
                     let light = fileIO.readByte();
-                    oldMapHelper.misc = fileIO.readByte();
-                    if (worldMap.release >= 50) {
-                        oldMapHelper.misc2 = fileIO.readByte();
-                    }
-                    else {
-                        oldMapHelper.misc2 = 0;
-                    }
-                    let isGradientType = false;
-                    const option = oldMapHelper.option();
-                    const color = oldMapHelper.color();
-                    if (color !== 0) {
-                        console.log(color);
-                    }
+                    const flags = new MapFlagsV1(worldMap.release >= 50 ? fileIO.readUInt16() : fileIO.readByte());
                     let cell;
-                    if (oldMapHelper.active()) {
-                        cell = new MapTile(light, id, option);
+                    if (flags.tile) {
+                        cell = new MapTile(light, id, flags.option);
                     }
-                    else if (oldMapHelper.water()) {
+                    else if (flags.water) {
                         cell = new MapLiquid(light, LiquidID.Water);
                     }
-                    else if (oldMapHelper.lava()) {
+                    else if (flags.lava) {
                         cell = new MapLiquid(light, LiquidID.Lava);
                     }
-                    else if (oldMapHelper.honey()) {
+                    else if (flags.honey) {
                         cell = new MapLiquid(light, LiquidID.Honey);
                     }
-                    else if (oldMapHelper.wall()) {
-                        cell = new MapWall(light, id + option, 0);
-                    }
-                    else if (y < worldMap.worldSurface) {
-                        isGradientType = true;
-                        cell = new MapAirSky(light);
-                    }
-                    else if (y < worldMap.rockLayer) {
-                        isGradientType = true;
-                        if (id >= mapCellColors.maxDirtGradients) {
-                            id = 255;
-                        }
-                        cell = new MapAirDirt(light, id);
-                    }
-                    else if (y < underworldLayer) {
-                        isGradientType = true;
-                        if (id >= mapCellColors.maxRockGradients) {
-                            id = 255;
-                        }
-                        cell = new MapAirRock(light, id);
+                    else if (flags.wall) {
+                        cell = new MapWall(light, id + flags.option, 0);
                     }
                     else {
-                        cell = new MapAirSky(light);
+                        cell = new MapAir(light, id);
                     }
                     worldMap.setCell(x, y, cell);
                     let repeated = fileIO.readInt16();
@@ -201,20 +152,6 @@ export class MapReader {
                         while (repeated > 0) {
                             y++;
                             repeated--;
-                            if (isGradientType) {
-                                if (y < worldMap.worldSurface) {
-                                    cell = new MapAirSky(light);
-                                }
-                                else if (y < worldMap.rockLayer) {
-                                    cell = new MapAirDirt(light, id);
-                                }
-                                else if (y < underworldLayer) {
-                                    cell = new MapAirRock(light, id);
-                                }
-                                else {
-                                    cell = new MapAirSky(light);
-                                }
-                            }
                             worldMap.setCell(x, y, cell);
                         }
                     }
@@ -226,23 +163,7 @@ export class MapReader {
                             if (light <= 18) {
                                 continue;
                             }
-                            if (isGradientType) {
-                                if (y < worldMap.worldSurface) {
-                                    cell = new MapAirSky(light);
-                                }
-                                else if (y < worldMap.rockLayer) {
-                                    cell = new MapAirDirt(light, id);
-                                }
-                                else if (y < underworldLayer) {
-                                    cell = new MapAirRock(light, id);
-                                }
-                                else {
-                                    cell = new MapAirSky(light);
-                                }
-                            }
-                            else {
-                                cell = cell.copyWithLight(light);
-                            }
+                            cell = cell.copyWithLight(light);
                             worldMap.setCell(x, y, cell);
                         }
                     }
@@ -264,102 +185,74 @@ export class MapReader {
         fileIO.readInt16(); // rock count
         const tileHasOptions = fileIO.readBitArray(tileCount);
         const wallHasOptions = fileIO.readBitArray(wallCount);
-        const tileOptionCounts = new Uint8Array(tileCount);
-        let tileTotal = 0;
+        const tileOptionsCount = new Uint8Array(tileCount);
         for (let i = 0; i < tileCount; ++i) {
-            tileOptionCounts[i] = !tileHasOptions[i] ? 1 : fileIO.readByte();
-            tileTotal += tileOptionCounts[i];
+            tileOptionsCount[i] = tileHasOptions[i] ? fileIO.readByte() : 1;
         }
-        const wallOptionCounts = new Uint8Array(wallCount);
-        let wallTotal = 0;
+        const wallOptionsCount = new Uint8Array(wallCount);
         for (let i = 0; i < wallCount; ++i) {
-            wallOptionCounts[i] = !wallHasOptions[i] ? 1 : fileIO.readByte();
-            wallTotal += wallOptionCounts[i];
+            wallOptionsCount[i] = wallHasOptions[i] ? fileIO.readByte() : 1;
         }
-        const tileIdFromType = [];
-        const tileOptionFromType = [];
-        const wallIdFromType = [];
-        const wallOptionFromType = [];
+        const tileIdFromIndex = [];
+        const tileOptionFromIndex = [];
+        const wallIdFromIndex = [];
+        const wallOptionFromIndex = [];
         let tileType = 0;
         for (let i = 0; i < tileCount; i++) {
-            for (let j = 0; j < tileOptionCounts[i]; j++) {
-                tileIdFromType[tileType] = i;
-                tileOptionFromType[tileType] = j;
+            for (let j = 0; j < tileOptionsCount[i]; j++) {
+                tileIdFromIndex[tileType] = i;
+                tileOptionFromIndex[tileType] = j;
                 tileType++;
             }
         }
         let wallType = 0;
         for (let i = 0; i < wallCount; i++) {
-            for (let j = 0; j < wallOptionCounts[i]; j++) {
-                wallIdFromType[wallType] = i;
-                wallOptionFromType[wallType] = j;
+            for (let j = 0; j < wallOptionsCount[i]; j++) {
+                wallIdFromIndex[wallType] = i;
+                wallOptionFromIndex[wallType] = j;
                 wallType++;
             }
         }
         const deflatedFileIO = worldMap.release < 93 ? fileIO : await fileIO.decompress("deflate-raw");
         for (let y = 0; y < worldMap.height; ++y) {
             for (let x = 0; x < worldMap.width; ++x) {
-                const tileFlags = deflatedFileIO.readByte(); // VVWZYYYX
-                // X - has color
-                // YYY - tile group
-                // Z - tile type index width
-                // W - has light level
-                // V - has repeated and repeated width
-                const tilePaint = (tileFlags & 1) != 1 ? 0 : deflatedFileIO.readByte();
-                const cellGroup = (tileFlags & 14) >> 1;
-                const hasType = cellGroup === MapCellGroupSerialized.Tile || cellGroup === MapCellGroupSerialized.Wall || cellGroup === MapCellGroupSerialized.DirtRock;
-                const type = !hasType ? 0 : ((tileFlags & 16) !== 16 ? deflatedFileIO.readByte() : deflatedFileIO.readUInt16());
-                const light = (tileFlags & 32) !== 32 ? 255 : deflatedFileIO.readByte();
-                let repeated;
-                switch (((tileFlags & 192) >> 6)) {
-                    case 0:
-                        repeated = 0;
-                        break;
-                    case 1:
-                        repeated = deflatedFileIO.readByte();
-                        break;
-                    case 2:
-                        repeated = deflatedFileIO.readInt16();
-                        break;
-                    default:
-                        repeated = 0;
-                        break;
-                }
+                const flags = new MapFlagsV2(deflatedFileIO.readByte());
+                const paint = flags.hasPaint ? deflatedFileIO.readByte() : 0;
+                const cellGroup = flags.group;
+                const hasIndex = cellGroup === MapCellGroupSerialized.Tile || cellGroup === MapCellGroupSerialized.Wall || cellGroup === MapCellGroupSerialized.DirtRock;
+                const index = !hasIndex ? 0 : flags.hasWideType ? deflatedFileIO.readUInt16() : deflatedFileIO.readByte();
+                const light = flags.hasLight ? deflatedFileIO.readByte() : 255;
+                const repeatedWidth = flags.repeatedWidth;
+                let repeated = repeatedWidth === 2 ? deflatedFileIO.readInt16() : repeatedWidth === 1 ? deflatedFileIO.readByte() : 0;
                 let cell;
                 switch (cellGroup) {
                     case MapCellGroupSerialized.Empty:
                         x += repeated;
                         continue;
                     case MapCellGroupSerialized.Tile:
-                        cell = new MapTile(light, tileIdFromType[type], tileOptionFromType[type], tilePaint >> 1 & 31);
+                        cell = new MapTile(light, tileIdFromIndex[index], tileOptionFromIndex[index], paint >> 1 & 31);
                         break;
                     case MapCellGroupSerialized.Wall:
-                        cell = new MapWall(light, wallIdFromType[type], wallOptionFromType[type], tilePaint >> 1 & 31);
+                        cell = new MapWall(light, wallIdFromIndex[index], wallOptionFromIndex[index], paint >> 1 & 31);
                         break;
                     case MapCellGroupSerialized.Water:
                     case MapCellGroupSerialized.Lava:
                     case MapCellGroupSerialized.Honey:
                         let liquidId = cellGroup - 3;
-                        if ((tilePaint & 0x40) == 0x40) { // shimmer
+                        if ((paint & 0x40) == 0x40) { // shimmer
                             liquidId = 3;
                         }
                         cell = new MapLiquid(light, liquidId);
                         break;
                     case MapCellGroupSerialized.Sky:
-                        cell = new MapAirSky(light);
+                        cell = new MapAir(light, index);
                         break;
                     case MapCellGroupSerialized.DirtRock:
                         if (worldMap.worldSurface === -1) {
                             worldMap.worldSurface = y;
                         }
-                        if (y < worldMap.rockLayer) {
-                            cell = new MapAirDirt(light, type);
-                            break;
-                        }
-                        else {
-                            cell = new MapAirRock(light, type);
-                            break;
-                        }
+                        cell = new MapAir(light, index);
+                        break;
                 }
                 worldMap.setCell(x, y, cell);
                 if (light === 255) {

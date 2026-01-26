@@ -1,14 +1,9 @@
-export declare class Color {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
-    constructor(r: number, g: number, b: number, a?: number);
-    toString(): string;
-    copy(): Color;
-    static get black(): Color;
-    static get white(): Color;
-    static get transparent(): Color;
-    static readonly globalBlack: Color;
-    static readonly globalWhite: Color;
+export interface Color {
+    0: number;
+    1: number;
+    2: number;
+}
+export declare class Colors {
+    static black: Color;
+    static white: Color;
 }

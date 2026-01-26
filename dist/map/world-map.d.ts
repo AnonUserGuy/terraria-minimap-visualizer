@@ -1,9 +1,10 @@
+import { Color } from "../net/color.js";
+import { MapDataJSON, MapData } from "../data/map-data.js";
 import { MapCell } from "./cell/map-cell.js";
 export declare class WorldMap {
     protected _width: number;
     protected _height: number;
-    private skyDepths;
-    private sky;
+    mapData: MapData;
     cells: MapCell[];
     worldName: string;
     worldId: number;
@@ -14,16 +15,20 @@ export declare class WorldMap {
     worldSurface: number;
     worldSurfaceEstimated: boolean;
     rockLayer: number;
-    constructor(width?: number, height?: number);
+    rockLayerEstimated: boolean;
+    constructor(mapData: MapData | MapDataJSON, width?: number, height?: number);
     get width(): number;
     set width(val: number);
     get height(): number;
     set height(val: number);
+    get underworldLayer(): number;
     setDimensions(w: number, h: number): void;
     updateDimensions(): void;
-    setCell(x: number, y: number, tile: MapCell): void;
+    setCell(x: number, y: number, cell: MapCell): void;
     cell(x: number, y: number): MapCell;
-    private fixSky;
+    color(x: number, y: number): Color;
+    colorPainted(x: number, y: number): Color;
+    getString(x: number, y: number): string;
     read(data: (Uint8Array | ArrayBuffer)): Promise<void>;
     isReleaseSafe(): boolean;
     writeSchematic(): ArrayBufferLike;

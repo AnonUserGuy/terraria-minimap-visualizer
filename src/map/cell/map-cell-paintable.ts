@@ -1,22 +1,13 @@
-import { PaintID } from "../../id/paint-ids.js";
-import { TileID } from "../../id/tile-ids.js";
-import { WallID } from "../../id/wall-ids.js";
 import { MapCell, MapCellGroup } from "./map-cell.js";
-import { mapCellColors } from "../map-cell-colors.js";
 
 export class MapCellPaintable extends MapCell {
-    public id: TileID | WallID;
     public option: number;
-    public paint: PaintID;
+    public paint: number;
     
-    constructor(light: number, group: MapCellGroup, id: TileID | WallID, option = 0, paint = PaintID.None) {
+    constructor(light: number, group: MapCellGroup, id: number, option = 0, paint = 0) {
         super(light, group, id);
         this.option = option;
         this.paint = paint;
-    }
-
-    public getColorPainted() {
-        return mapCellColors.applyPaint(this.group, this.getColor(), this.paint);
     }
 
     public copyWithLight(light: number) {

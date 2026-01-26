@@ -1,5 +1,3 @@
-import { Color } from "../../net/color";
-
 export enum MapCellGroup {
     Empty,
     Tile,
@@ -17,18 +15,6 @@ export class MapCell {
         this.group = group;
         this.id = id;
         this.light = light;
-    }
-
-    public getColor(): Color {
-        return this.getColorInternal() || Color.globalBlack;
-    }
-
-    public getColorInternal(): Color {
-        return undefined;
-    }
-    
-    public getColorPainted() {
-        return this.getColor();
     }
 
     public copy() {
@@ -49,9 +35,5 @@ export class MapCell {
 
     public equalsAfterExport(other: MapCell) {
         return this.equalsWithoutLight(other);
-    }
-
-    public toString() {
-        return `light ${this.light} - ${MapCellGroup[this.group]}`;
     }
 }

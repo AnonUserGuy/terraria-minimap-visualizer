@@ -1,3 +1,4 @@
+import { MapData, MapDataJSON } from "../data/map-data.js";
 import { WorldMap } from "./world-map.js";
 export declare class WorldMapCanvas extends WorldMap {
     canvasLayers: OffscreenCanvas[];
@@ -12,7 +13,7 @@ export declare class WorldMapCanvas extends WorldMap {
     canvasOutput: HTMLCanvasElement;
     private isDrawnAccurate;
     static readonly layerNames: string[];
-    constructor(canvas: HTMLCanvasElement);
+    constructor(mapData: MapData | MapDataJSON, canvas: HTMLCanvasElement);
     updateDimensions(): void;
     read(data: (Uint8Array | ArrayBuffer)): Promise<void>;
     drawFast(layersActive: boolean[]): void;
@@ -21,12 +22,13 @@ export declare class WorldMapCanvas extends WorldMap {
     private drawCanvasesAccurate;
     private drawLayers;
     private drawNormalLayers;
+    redrawAirLayer(): void;
     private drawCells;
     private drawColor;
     private drawLightingLayer;
     private drawLighting;
     private drawUnexploredLayer;
-    private blendImageData;
     private eraseCanvases;
+    private blendImageData;
     private eraseImageData;
 }

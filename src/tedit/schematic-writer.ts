@@ -1,25 +1,22 @@
 import { BinaryWriter } from "../net/binary-writer.js";
-import { TileData } from "../data/tile-data.js";
-import { TileID } from "../id/tile-ids.js";
-import { WorldMap } from "../map/world-map.js";
+import { TileType } from "../data/map-data.js";
+import { LiquidID } from "../id/liquid-ids.js";
 import { MapCell, MapCellGroup } from "../map/cell/map-cell.js";
-import { PaintID } from "../id/paint-ids.js";
 import { MapWall } from "../map/cell/map-wall.js";
 import { MapTile } from "../map/cell/map-tile.js";
-import { LiquidID } from "../id/liquid-ids.js";
-import { VersionData } from "../data/version-data.js";
+import { WorldMap } from "../map/world-map.js";
 
 export class SchematicWriter {
-    
+
     // largely adapted from Terraria-Map-Editor/src/TEdit.Editor/Clipboard/ClipboardBuffer.File.cs -> ClipboardBuffer.SaveV4
     static writeSchematic(bw: BinaryWriter, worldMap: WorldMap) {
         bw.writeString(worldMap.worldName!);
-        bw.writeInt32(VersionData.latestRelease + 10000);
-        bw.writeBitArray(TileData.frameImportant);
+        bw.writeInt32(worldMap.mapData.latestRelease() + 10000);
+        bw.writeBitArray(worldMap.mapData.frameImportant);
         bw.writeInt32(worldMap.width);
         bw.writeInt32(worldMap.height);
 
-        this.writeTiles(bw, worldMap);
+        this.writeCells(bw, worldMap);
 
         // chests
         bw.writeInt16(0); // count 
@@ -32,43 +29,50 @@ export class SchematicWriter {
         bw.writeInt32(0); // count
 
         bw.writeString(worldMap.worldName!);
-        bw.writeInt32(VersionData.latestRelease);
+        bw.writeInt32(worldMap.mapData.latestRelease());
         bw.writeInt32(worldMap.width);
         bw.writeInt32(worldMap.height);
     }
 
     // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SaveTiles
-    static writeTiles(bw: BinaryWriter, worldMap: WorldMap) {
+    static writeCells(bw: BinaryWriter, worldMap: WorldMap) {
         const u: number[] = [];
         const v: number[] = [];
-        let lastWall = MapWall.anyWall;
+        let lastWall = worldMap.mapData.anyWall;
 
         for (let x = 0; x < worldMap.width; x++) {
             for (let y = 0; y < worldMap.height; y++) {
                 const i = y * worldMap.width + x;
-                const tile = worldMap.cells[i] || MapTile.shadowDirt;
+                const cell = worldMap.cells[i] || worldMap.mapData.unexploredTile;
+                const frameImportant = cell.group === MapCellGroup.Tile && worldMap.mapData.frameImportant[cell.id];
                 let needsWall = false;
-                if (tile !== MapTile.shadowDirt) {
-                    if (tile.group === MapCellGroup.Tile && TileData.frameImportant[tile.id!]) {
-                        this.getTileUV(worldMap, tile as MapTile, x, y, u, v);
-                        if (tile.id === TileID.Torches) {
-                            needsWall = this.needsWall(worldMap, x, y);
+                let u2 = 0;
+                let v2 = 0;
+                if (cell !== worldMap.mapData.unexploredTile) {
+                    if (frameImportant) {
+                        this.getTileUVFromGeometry(worldMap, cell as MapTile, x, y, u, v);
+                        const tileData = worldMap.mapData.tile(cell.id);
+                        if (tileData.type) {
+                            [u2, v2] = this.getTileUVFromOption(tileData.type as TileType, (cell as MapTile).option);
+                            if (tileData.type === TileType.Torches) {
+                                needsWall = this.needsWall(worldMap, x, y);
+                            }
                         }
-                    } else if (tile.group === MapCellGroup.Wall) {
-                        lastWall = tile as MapWall;
+                    } else if (cell.group === MapCellGroup.Wall) {
+                        lastWall = cell as MapWall;
                     }
                 }
 
-                const res = this.serializeTileData(tile, u[i], v[i], needsWall, lastWall);
-                const { tileData } = res;
-                let { headerIndex, dataIndex } = res;
+                const res = this.serializeCellData(cell, u[i] + u2, v[i] + v2, needsWall, lastWall, frameImportant);
+                const { cellData, headerIndex } = res;
+                let { dataIndex } = res;
 
-                let header1 = tileData[headerIndex];
+                let header1 = cellData[headerIndex];
 
                 let rle = 0;
                 let y2 = y + 1;
                 let i2 = y2 * worldMap.width + x;
-                while (y2 < worldMap.height && tile.equalsAfterExport(worldMap.cell(x, y2) || MapTile.shadowDirt) && (tile.group !== MapCellGroup.Tile || !TileData.frameImportant[tile.id] || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
+                while (y2 < worldMap.height && cell.equalsAfterExport(worldMap.cell(x, y2) || worldMap.mapData.unexploredTile) && (cell.group !== MapCellGroup.Tile || !frameImportant || (u[i] === u[y2 * worldMap.width + x] && v[i] === v[y2 * worldMap.width + x]))) {
                     rle++;
                     y2++;
                     i2 = y2 * worldMap.width + x;
@@ -76,119 +80,119 @@ export class SchematicWriter {
                 y += rle;
 
                 if (rle > 0) {
-                    tileData[dataIndex++] = rle & 0xFF;
+                    cellData[dataIndex++] = rle & 0xFF;
                     if (rle <= 255) {
                         header1 |= 0b0100_0000;
                     } else {
-                        tileData[dataIndex++] = rle >> 8;
+                        cellData[dataIndex++] = rle >> 8;
                         header1 |= 0b1000_0000;
                     }
-                    tileData[headerIndex] = header1;
+                    cellData[headerIndex] = header1;
                 }
 
-                bw.writeUInt8Array(tileData, headerIndex, dataIndex - headerIndex);
+                bw.writeUInt8Array(cellData, headerIndex, dataIndex - headerIndex);
             }
         }
     }
 
     // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SerializeTileData
-    static serializeTileData(tile: MapCell, u: number | undefined, v: number | undefined, needsWall: boolean, wall: MapWall) {
-        const tileData = new Uint8Array(16);
+    static serializeCellData(cell: MapCell, u: number, v: number, needsWall: boolean, wall: MapWall, frameImportant: boolean) {
+        const cellData = new Uint8Array(16);
         let dataIndex = 4;
 
         let header3 = 0;
         let header2 = 0;
         let header1 = 0;
-        if (tile.group === MapCellGroup.Tile) {
+        if (cell.group === MapCellGroup.Tile) {
             header1 |= 0b0000_0010;
-            tileData[dataIndex++] = tile.id! & 0xFF;
-            if (tile.id! > 255) {
+            cellData[dataIndex++] = cell.id & 0xFF;
+            if (cell.id > 255) {
                 header1 |= 0b0010_0000;
-                tileData[dataIndex++] = tile.id! >> 8;
+                cellData[dataIndex++] = cell.id >> 8;
             }
 
-            if (TileData.frameImportant[tile.id!]) {
-                tileData[dataIndex++] = (u! & 0xFF); // low byte
-                tileData[dataIndex++] = ((u! & 0xFF00) >> 8); // high byte
-                tileData[dataIndex++] = (v! & 0xFF); // low byte
-                tileData[dataIndex++] = ((v! & 0xFF00) >> 8); // high byte
+            if (frameImportant) {
+                u ||= 0;
+                v ||= 0;
+                cellData[dataIndex++] = (u & 0xFF); // low byte
+                cellData[dataIndex++] = ((u & 0xFF00) >> 8); // high byte
+                cellData[dataIndex++] = (v & 0xFF); // low byte
+                cellData[dataIndex++] = ((v & 0xFF00) >> 8); // high byte
             }
 
-            if ((tile as MapTile).paint !== PaintID.None) {
+            if ((cell as MapTile).paint) {
                 header3 |= 0b0000_1000;
-                tileData[dataIndex++] = (tile as MapTile).paint;
+                cellData[dataIndex++] = (cell as MapTile).paint;
             }
 
             if (needsWall) {
                 header1 |= 0b0000_0100;
-                tileData[dataIndex++] = wall.id! & 0xFF;
+                cellData[dataIndex++] = wall.id & 0xFF;
 
-                if (wall.paint !== PaintID.None) {
+                if (wall.paint) {
                     header3 |= 0b0001_0000;
-                    tileData[dataIndex++] = wall.paint;
+                    cellData[dataIndex++] = wall.paint;
                 }
             }
-        } else if (tile.group === MapCellGroup.Wall) {
+        } else if (cell.group === MapCellGroup.Wall) {
             header1 |= 0b0000_0100;
-            tileData[dataIndex++] = tile.id! & 0xFF;
+            cellData[dataIndex++] = cell.id & 0xFF;
 
-            if ((tile as MapWall).paint !== PaintID.None) {
+            if ((cell as MapWall).paint) {
                 header3 |= 0b0001_0000;
-                tileData[dataIndex++] = (tile as MapWall).paint;
+                cellData[dataIndex++] = (cell as MapWall).paint;
             }
-        } else if (tile.group >= MapCellGroup.Liquid) {
-            if (tile.id === LiquidID.Water) {
+        } else if (cell.group === MapCellGroup.Liquid) {
+            if (cell.id === LiquidID.Water) {
                 header1 |= 0b0000_1000;
-            } else if (tile.id === LiquidID.Lava) {
+            } else if (cell.id === LiquidID.Lava) {
                 header1 |= 0b0001_0000;
-            } else if (tile.id === LiquidID.Honey) {
+            } else if (cell.id === LiquidID.Honey) {
                 header1 |= 0b0001_1000;
             } else { // shimmer
                 header3 |= 0b1000_0000;
             }
-            tileData[dataIndex++] = 255;
+            cellData[dataIndex++] = 255;
         }
 
         let headerIndex = 3;
         if (header3 !== 0) {
             header2 |= 0b0000_0001;
-            tileData[headerIndex--] = header3;
+            cellData[headerIndex--] = header3;
         }
         if (header2 !== 0) {
             header1 |= 0b0000_0001;
-            tileData[headerIndex--] = header2;
+            cellData[headerIndex--] = header2;
         }
-        tileData[headerIndex] = header1;
-        return { tileData, headerIndex, dataIndex };
+        cellData[headerIndex] = header1;
+        return { cellData, headerIndex, dataIndex };
     }
 
-    static getTileUV(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
-        const i = y * worldMap.width + x;
-        if (TileData.tree[tile.id]) {
+    static getTileUVFromGeometry(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
+        const tileData = worldMap.mapData.tile(tile.id);
+        if (tileData.type === TileType.Trees) {
             this.resolveTree(worldMap, x, y, u, v);
-        } else if (tile.id === TileID.Stalactite) {
+        } else if (tileData.type === TileType.Stalactite) {
             this.resolveStalactite(worldMap, x, y, v);
-        } else if (tile.id === TileID.PlantDetritus) {
+        } else if (tileData.type === TileType.PlantDetritus) {
             this.resolvePlantDetritus(worldMap, x, y, u, v);
         } else {
-            this.resolveWidth(worldMap, x, y, u);
-            this.resolveHeight(worldMap, x, y, v);
+            if (tileData.width) {
+                this.resolveWidth(worldMap, x, y, tileData.width, u);
+            }
+            if (tileData.height) {
+                this.resolveHeight(worldMap, x, y, tileData.height, v);
+            }
         }
-        const { frameX, frameY } = this.getTileUVFromOption(tile.id, tile.option);
-        u[i] = (u[i] || 0) + frameX;
-        v[i] = (v[i] || 0) + frameY;
     }
 
-    static getTileUVFromOption(tileType: number, baseOption: number) {
-        const tileCache = {
-            frameX: 0,
-            frameY: 0
-        };
-        switch (tileType) {
-            case TileID.Benches:
+    static getTileUVFromOption(optionType: TileType, option: number) {
+        const result = [0, 0];
+        switch (optionType) {
+            case TileType.Benches:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 0:
                             n = 0; // 21, 23
                             break;
@@ -200,36 +204,34 @@ export class SchematicWriter {
                             n = 1; // ?
                             break;
                     }
-                    tileCache.frameX = n * 54;
+                    result[0] = n * 54;
                     break;
                 }
-            case TileID.Platforms:
-                if (baseOption === 1) {
-                    tileCache.frameY = 48 * 18;
+            case TileType.Platforms:
+                if (option === 1) {
+                    result[1] = 48 * 18;
                 }
                 break;
-            case TileID.Chairs:
-                if (baseOption === 1) {
-                    tileCache.frameY = 1 * 40; // 20
+            case TileType.Chairs:
+                if (option === 1) {
+                    result[1] = 1 * 40; // 20
                 }
                 break;
-            case TileID.LilyPad:
-            case TileID.Cattail:
-                tileCache.frameY = baseOption * 18;
+            case TileType.LilyPad:
+                result[1] = option * 18;
                 break;
-            case TileID.Torches:
-                if (baseOption === 1) {
-                    tileCache.frameX = 66;
+            case TileType.Torches:
+                if (option === 1) {
+                    result[0] = 66;
                 }
                 break;
-            case TileID.SoulBottles:
-                tileCache.frameY = baseOption * 36;
+            case TileType.SoulBottles:
+                result[1] = option * 36;
                 break;
-            case TileID.Containers:
-            case TileID.FakeContainers:
+            case TileType.Containers:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 1:
                             n = 1; // 2, 10, 13, 15
                             break;
@@ -246,34 +248,32 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     }
-                    tileCache.frameX = n * 36;
+                    result[0] = n * 36;
                     break;
                 }
-            case TileID.Containers2:
-            case TileID.FakeContainers2:
-                tileCache.frameX = baseOption * 36;
+            case TileType.Containers2:
+                result[0] = option * 36;
                 break;
-            case TileID.GolfTrophies:
-                tileCache.frameX = baseOption * 36;
+            case TileType.GolfTrophies:
+                result[0] = option * 36;
                 break;
-            case TileID.Pots:
-            case TileID.PotsEcho:
-                tileCache.frameY = baseOption * 108;
+            case TileType.Pots:
+                result[1] = option * 108;
                 break;
-            case TileID.ShadowOrbs:
-                if (baseOption === 1) {
-                    tileCache.frameX = 36;
+            case TileType.ShadowOrbs:
+                if (option === 1) {
+                    result[0] = 36;
                 }
                 break;
-            case TileID.DemonAltar:
-                if (baseOption === 1) {
-                    tileCache.frameX = 54;
+            case TileType.DemonAltar:
+                if (option === 1) {
+                    result[0] = 54;
                 }
                 break;
-            case TileID.Traps:
+            case TileType.Traps:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 1:
                             n = 1; // 2, 3, 4
                         case 2:
@@ -281,54 +281,51 @@ export class SchematicWriter {
                         default:
                             n = 0;
                     }
-                    tileCache.frameY = n * 18;
+                    result[1] = n * 18;
                     break;
                 }
-            case TileID.ImmatureHerbs:
-            case TileID.MatureHerbs:
-            case TileID.BloomingHerbs:
-                tileCache.frameX = baseOption * 18;
+            case TileType.Herbs:
+                result[0] = option * 18;
                 break;
-            case TileID.PotsSuspended:
-                tileCache.frameX = baseOption * 36;
+            case TileType.PotsSuspended:
+                result[0] = option * 36;
                 break;
-            case TileID.Statues:
-                switch (baseOption) {
+            case TileType.Statues:
+                switch (option) {
                     case 1:
-                        tileCache.frameX = 1548;
+                        result[0] = 1548;
                         break;
                     case 2:
-                        tileCache.frameX = 1656;
+                        result[0] = 1656;
                         break;
                     default:
-                        tileCache.frameX = 0;
+                        result[0] = 0;
                         break;
                 }
                 break;
-            case TileID.AdamantiteForge:
-                if (baseOption === 1) {
-                    tileCache.frameX = 52;
+            case TileType.AdamantiteForge:
+                if (option === 1) {
+                    result[0] = 52;
                 }
                 break;
-            case TileID.MythrilAnvil:
-                if (baseOption === 1) {
-                    tileCache.frameX = 28;
+            case TileType.MythrilAnvil:
+                if (option === 1) {
+                    result[0] = 28;
                 }
                 break;
-            case TileID.Stalactite:
-                tileCache.frameX = baseOption * 52;
+            case TileType.Stalactite:
+                result[0] = option * 52;
                 break;
-            case TileID.ExposedGems:
-                tileCache.frameX = baseOption * 18;
+            case TileType.ExposedGems:
+                result[0] = option * 18;
                 break;
-            case TileID.LongMoss:
-                tileCache.frameX = baseOption * 22;
+            case TileType.LongMoss:
+                result[0] = option * 22;
                 break;
-            case TileID.SmallPiles1x1Echo:
-            case TileID.SmallPiles: // can also do one below but not determinable from just baseOption
+            case TileType.SmallPiles1x1:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 0:
                             n = 0; // 0~5, 19, 20, 21, 22, 23, 24, 33, 38, 39, 40, 41~58
                             break;
@@ -348,14 +345,14 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     }
-                    tileCache.frameX = (n % 18) * 36;
-                    tileCache.frameY = Math.floor(n / 18) + 1 * 18;
+                    result[0] = (n % 18) * 36;
+                    result[1] = Math.floor(n / 18) + 1 * 18;
                     break;
                 }
-            case TileID.SmallPiles2x1Echo:
+            case TileType.SmallPiles2x1:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 0:
                             n = 0; // 0~5, 28, 29, 30, 31, 32, 54~71
                             break;
@@ -375,14 +372,13 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     }
-                    tileCache.frameX = n * 18;
+                    result[0] = n * 18;
                     break;
                 }
-            case TileID.LargePiles:
-            case TileID.LargePilesEcho:
+            case TileType.LargePiles:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 2:
                             n = 0; // 0~6
                             break;
@@ -402,14 +398,13 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     }
-                    tileCache.frameX = n * 54;
+                    result[0] = n * 54;
                     break;
                 }
-            case TileID.LargePiles2:
-            case TileID.LargePiles2Echo:
+            case TileType.LargePiles2:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 0:
                             n = 0; // 0~2, 14, 15, 16, 23~24, 29~46
                             break;
@@ -438,22 +433,22 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     } // 3, 5, 9 skipped?
-                    tileCache.frameX = (n % 36) * 54;
-                    tileCache.frameY = Math.floor(n / 36) * 36;
+                    result[0] = (n % 36) * 54;
+                    result[1] = Math.floor(n / 36) * 36;
                     break;
                 }
-            case TileID.DyePlants:
-                tileCache.frameX = baseOption * 34;
+            case TileType.DyePlants:
+                result[0] = option * 34;
                 break;
-            case TileID.Crystals:
-                if (baseOption === 1) {
-                    tileCache.frameX = 324;
+            case TileType.Crystals:
+                if (option === 1) {
+                    result[0] = 324;
                 }
                 break;
-            case TileID.Painting3X3:
+            case TileType.Painting3X3:
                 {
                     let n: number;
-                    switch (baseOption) {
+                    switch (option) {
                         case 0:
                             n = 0;
                             break;
@@ -473,85 +468,78 @@ export class SchematicWriter {
                             n = 0;
                             break;
                     }
-                    tileCache.frameX = (n % 36) * 54;
-                    tileCache.frameY = Math.floor(n / 36) * 54;
+                    result[0] = (n % 36) * 54;
+                    result[1] = Math.floor(n / 36) * 54;
                     break;
                 }
-            case TileID.Painting6X4:
+            case TileType.Painting6X4:
                 {
                     let n: number;
-                    if (baseOption === 1) {
+                    if (option === 1) {
                         n = 22;
                     } else {
                         n = 0;
                     }
-                    tileCache.frameY = n * 72;
+                    result[1] = n * 72;
                     break;
                 }
-            case TileID.GemLocks:
-                tileCache.frameX = baseOption * 54;
+            case TileType.GemLocks:
+                result[0] = option * 54;
                 break;
-            case TileID.PartyPresent:
-            case TileID.SillyBalloonTile:
-                tileCache.frameX * baseOption * 36;
+            case TileType.PartyPresent:
+                result[0] * option * 36;
                 break;
-            case TileID.LogicGateLamp:
-                tileCache.frameX = baseOption * 18;
+            case TileType.LogicGateLamp:
+                result[0] = option * 18;
                 break;
-            case TileID.WeightedPressurePlate:
-            case TileID.LogicGate:
-            case TileID.LogicSensor:
-                tileCache.frameY = baseOption * 18;
+            case TileType.WeightedPressurePlate:
+                result[1] = option * 18;
                 break;
-            case TileID.GolfCupFlag:
-                tileCache.frameX = baseOption * 18;
+            case TileType.GolfCupFlag:
+                result[0] = option * 18;
                 break;
-            case TileID.PottedPlants2:
-                if (baseOption === 1) {
-                    tileCache.frameX = 8 * 54
+            case TileType.PottedPlants2:
+                if (option === 1) {
+                    result[0] = 8 * 54
                 }
                 break;
-            case TileID.TeleportationPylon:
-                tileCache.frameX = baseOption * 54;
+            case TileType.TeleportationPylon:
+                result[0] = option * 54;
                 break;
         }
-        return tileCache;
+        return result;
     }
 
-    static resolveWidth(worldMap: WorldMap, x: number, y: number, u: number[]) {
+    static resolveWidth(worldMap: WorldMap, x: number, y: number, width: number, u: number[]) {
         const i = y * worldMap.width + x;
         const tile = worldMap.cells[i];
-        if (tile.id! in TileData.width) {
-            if (x === 0) {
-                u[i] = 0;
+        if (x === 0) {
+            u[i] = 0;
+        } else {
+            const i2 = y * worldMap.width + x - 1;
+            const tileR = worldMap.cells[i2];
+            if (tileR && tileR.id === tile.id) {
+                u[i] = (u[i2] + 18) % (18 * width);
             } else {
-                const i2 = y * worldMap.width + x - 1;
-                const tileR = worldMap.cells[i2];
-                if (tileR && tileR.id! === tile.id) {
-                    u[i] = (u[i2] + 18) % (18 * TileData.width[tile.id]);
-                } else {
-                    u[i] = 0;
-                }
+                u[i] = 0;
             }
         }
     }
 
-    static resolveHeight(worldMap: WorldMap, x: number, y: number, v: number[]) {
+    static resolveHeight(worldMap: WorldMap, x: number, y: number, height: number, v: number[]) {
         const i = y * worldMap.width + x;
         const tile = worldMap.cells[i];
-        if (tile.id! in TileData.height) {
-            if (y === 0) {
+        if (y === 0) {
                 v[i] = 0;
             } else {
                 const i2 = (y - 1) * worldMap.width + x;
                 const tileU = worldMap.cells[i2];
-                if (tileU && tileU.id! === tile.id) {
-                    v[i] = (v[i2] + 18) % (18 * TileData.height[tile.id]);
+                if (tileU && tileU.id === tile.id) {
+                    v[i] = (v[i2] + 18) % (18 * height);
                 } else {
                     v[i] = 0;
                 }
             }
-        }
     }
 
     static resolveTree(worldMap: WorldMap, x: number, y: number, u: number[], v: number[]) {
@@ -559,6 +547,7 @@ export class SchematicWriter {
         if (u[i] !== undefined) {
             return;
         }
+        const treeData = worldMap.mapData.tree;
 
         // find top of tree
         let tolerance = 2;
@@ -582,8 +571,8 @@ export class SchematicWriter {
         }
 
         i = y * worldMap.width + x;
-        u[i] = TileData.treeBaseTop[0];
-        v[i] = TileData.treeBaseTop[1];
+        u[i] = treeData.baseTop[0];
+        v[i] = treeData.baseTop[1];
 
         // descend tree
         y++;
@@ -595,36 +584,36 @@ export class SchematicWriter {
                 left = true;
                 const i2 = i - 1;
                 if (y % 2 === 0) {
-                    u[i2] = TileData.treeBranchLeftLeafy[0];
-                    v[i2] = TileData.treeBranchLeftLeafy[1];
+                    u[i2] = treeData.branchLeftLeafy[0];
+                    v[i2] = treeData.branchLeftLeafy[1];
                 } else {
-                    u[i2] = TileData.treeBranchLeft[0];
-                    v[i2] = TileData.treeBranchLeft[1];
+                    u[i2] = treeData.branchLeft[0];
+                    v[i2] = treeData.branchLeft[1];
                 }
             }
             if (x < worldMap.width - 1 && this.treeAt(worldMap, x + 1, y)) {
                 right = true;
                 const i2 = i + 1;
                 if (y % 2 === 0) {
-                    u[i2] = TileData.treeBranchRightLeafy[0];
-                    v[i2] = TileData.treeBranchRightLeafy[1];
+                    u[i2] = treeData.branchRightLeafy[0];
+                    v[i2] = treeData.branchRightLeafy[1];
                 } else {
-                    u[i2] = TileData.treeBranchRight[0];
-                    v[i2] = TileData.treeBranchRight[1];
+                    u[i2] = treeData.branchRight[0];
+                    v[i2] = treeData.branchRight[1];
                 }
             }
             if (left && right) {
-                u[i] = TileData.treeBaseBranchBoth[0];
-                v[i] = TileData.treeBaseBranchBoth[1];
+                u[i] = treeData.baseBranchBoth[0];
+                v[i] = treeData.baseBranchBoth[1];
             } else if (left) {
-                u[i] = TileData.treeBaseBranchLeft[0];
-                v[i] = TileData.treeBaseBranchLeft[1];
+                u[i] = treeData.baseBranchLeft[0];
+                v[i] = treeData.baseBranchLeft[1];
             } else if (right) {
-                u[i] = TileData.treeBaseBranchRight[0];
-                v[i] = TileData.treeBaseBranchRight[1];
+                u[i] = treeData.baseBranchRight[0];
+                v[i] = treeData.baseBranchRight[1];
             } else {
-                u[i] = TileData.treeBase[0];
-                v[i] = TileData.treeBase[1];
+                u[i] = treeData.base[0];
+                v[i] = treeData.base[1];
             }
         }
 
@@ -635,34 +624,34 @@ export class SchematicWriter {
             if (x > 0 && this.treeAt(worldMap, x - 1, y)) {
                 left = true;
                 const i2 = i - 1;
-                u[i2] = TileData.treeTrunkLeft[0];
-                v[i2] = TileData.treeTrunkLeft[1];
+                u[i2] = treeData.trunkLeft[0];
+                v[i2] = treeData.trunkLeft[1];
             }
             if (x < worldMap.width - 1 && this.treeAt(worldMap, x + 1, y)) {
                 right = true;
                 const i2 = i + 1;
-                u[i2] = TileData.treeTrunkRight[0];
-                v[i2] = TileData.treeTrunkRight[1];
+                u[i2] = treeData.trunkRight[0];
+                v[i2] = treeData.trunkRight[1];
             }
             if (left && right) {
-                u[i] = TileData.treeTrunkBoth[0];
-                v[i] = TileData.treeTrunkBoth[1];
+                u[i] = treeData.trunkBoth[0];
+                v[i] = treeData.trunkBoth[1];
             } else if (left) {
-                u[i] = TileData.treeBaseTrunkLeft[0];
-                v[i] = TileData.treeBaseTrunkLeft[1];
+                u[i] = treeData.baseTrunkLeft[0];
+                v[i] = treeData.baseTrunkLeft[1];
             } else if (right) {
-                u[i] = TileData.treeBaseTrunkRight[0];
-                v[i] = TileData.treeBaseTrunkRight[1];
+                u[i] = treeData.baseTrunkRight[0];
+                v[i] = treeData.baseTrunkRight[1];
             } else {
-                u[i] = TileData.treeBase[0];
-                v[i] = TileData.treeBase[1];
+                u[i] = treeData.base[0];
+                v[i] = treeData.base[1];
             }
         }
     }
 
     static treeAt(worldMap: WorldMap, x: number, y: number) {
         const tile = worldMap.cell(x, y);
-        return tile && tile.group === MapCellGroup.Tile && TileData.tree[tile.id!];
+        return tile && tile.group === MapCellGroup.Tile && worldMap.mapData.tile(tile.id).type === TileType.Trees;
     }
 
     static resolveStalactite(worldMap: WorldMap, x: number, y: number, v: number[]) {
@@ -697,7 +686,7 @@ export class SchematicWriter {
 
     static stalactiteAt(worldMap: WorldMap, x: number, y: number) {
         const tile = worldMap.cell(x, y);
-        return tile && tile.group === MapCellGroup.Tile && tile.id === TileID.Stalactite;
+        return tile && tile.group === MapCellGroup.Tile && worldMap.mapData.tile(tile.id).type === TileType.Stalactite;
     }
 
     static resolvePlantDetritus(worldMap: WorldMap, x: number, y: number, u: number[], v: number[]) {
@@ -758,12 +747,12 @@ export class SchematicWriter {
 
     static plantDetritusAt(worldMap: WorldMap, x: number, y: number) {
         const tile = worldMap.cell(x, y);
-        return tile && tile.group === MapCellGroup.Tile && tile.id === TileID.PlantDetritus;
+        return tile && tile.group === MapCellGroup.Tile && worldMap.mapData.tile(tile.id).type === TileType.PlantDetritus;
     }
 
     static solidAt(worldMap: WorldMap, x: number, y: number) {
         const tile = worldMap.cell(x, y);
-        return tile && tile.group === MapCellGroup.Tile && TileData.solid[tile.id!];
+        return tile && tile.group === MapCellGroup.Tile && worldMap.mapData.tile(tile.id).solid;
     }
 
     static needsWall(worldMap: WorldMap, x: number, y: number) {

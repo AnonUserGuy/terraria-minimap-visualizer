@@ -1,4 +1,3 @@
-import { Color } from "../../net/color";
 export var MapCellGroup;
 (function (MapCellGroup) {
     MapCellGroup[MapCellGroup["Empty"] = 0] = "Empty";
@@ -12,15 +11,6 @@ export class MapCell {
         this.group = group;
         this.id = id;
         this.light = light;
-    }
-    getColor() {
-        return this.getColorInternal() || Color.globalBlack;
-    }
-    getColorInternal() {
-        return undefined;
-    }
-    getColorPainted() {
-        return this.getColor();
     }
     copy() {
         return this.copyWithLight(this.light);
@@ -36,8 +26,5 @@ export class MapCell {
     }
     equalsAfterExport(other) {
         return this.equalsWithoutLight(other);
-    }
-    toString() {
-        return `light ${this.light} - ${MapCellGroup[this.group]}`;
     }
 }

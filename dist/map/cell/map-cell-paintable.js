@@ -1,14 +1,9 @@
-import { PaintID } from "../../id/paint-ids.js";
 import { MapCell } from "./map-cell.js";
-import { mapCellColors } from "../map-cell-colors.js";
 export class MapCellPaintable extends MapCell {
-    constructor(light, group, id, option = 0, paint = PaintID.None) {
+    constructor(light, group, id, option = 0, paint = 0) {
         super(light, group, id);
         this.option = option;
         this.paint = paint;
-    }
-    getColorPainted() {
-        return mapCellColors.applyPaint(this.group, this.getColor(), this.paint);
     }
     copyWithLight(light) {
         return new MapCellPaintable(light, this.group, this.id, this.option, this.paint);
