@@ -1,6 +1,6 @@
 {
   "name": "terraria-minimap-visualizer",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "for visualizing/converting Terraria minimap (.map) files",
   "keywords": [
     "Terraria"
@@ -13,7 +13,7 @@
     "type": "git",
     "url": "git+https://github.com/AnonUserGuy/terraria-minimap-visualizer.git"
   },
-  "license": "ISC",
+  "license": "MS-PL",
   "author": "AnonUserGuy",
   "type": "module",
   "main": "dist/index.js",
