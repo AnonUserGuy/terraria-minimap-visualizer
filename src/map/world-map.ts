@@ -113,7 +113,7 @@ export class WorldMap {
         if (!cell) {
             return Colors.black;
         }
-        if (cell.group === MapCellGroup.Tile || cell.group === MapCellGroup.Wall) {
+        if ((cell.group === MapCellGroup.Tile || cell.group === MapCellGroup.Wall) && (cell as MapCellPaintable).paint !== 0) {
             return this.mapData.applyPaint(cell.group, this.color(x, y), (cell as MapCellPaintable).paint);
         } else {
             return this.color(x, y);

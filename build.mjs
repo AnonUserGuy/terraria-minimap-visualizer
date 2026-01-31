@@ -3,20 +3,42 @@ import esbuild from "esbuild";
 const base = {
   entryPoints: ["src/index.ts"],
   bundle: true,
-  format: "iife",
-  globalName: "terrariaMinimapVisualizer",
   target: ["es2020"],
   sourcemap: true
 };
 
-await esbuild.build({
+const index = {
   ...base,
-  outfile: "dist/browser/terraria-minimap-visualizer.js",
+  format: "esm",
+  platform: "browser"
+}
+
+const global = {
+  ...base,
+  format: "iife",
+  globalName: "terrariaMinimapVisualizer"
+}
+
+await esbuild.build({
+  ...index,
+  outfile: "dist/browser/index.js",
   minify: false
 });
 
 await esbuild.build({
-  ...base,
-  outfile: "dist/browser/terraria-minimap-visualizer.min.js",
+  ...index,
+  outfile: "dist/browser/index.min.js",
+  minify: true
+});
+
+await esbuild.build({
+  ...global,
+  outfile: "dist/browser/global.js",
+  minify: false
+});
+
+await esbuild.build({
+  ...global,
+  outfile: "dist/browser/global.min.js",
   minify: true
 });
