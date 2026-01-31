@@ -2,3 +2,4 @@
 *.bat
 *.tgz
 node_modules/
+dist/
