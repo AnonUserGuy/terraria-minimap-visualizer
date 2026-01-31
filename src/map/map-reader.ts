@@ -88,7 +88,14 @@ export class MapReader {
     }
 
     public static async read(fileIO: BinaryReader, worldMap: WorldMap) {
-        worldMap.release = fileIO.ReadInt32();
+        const release = fileIO.ReadInt32();
+        if (release & 0x8000) {
+            throw new Error("This file was written in a format not currently supported. " +
+                "We believe this format to only be used by files made in a private, development version of Terraria. " +
+                "If you're encountering this error from a file made in a publicly available version of Terraria, " +
+                "please submit a bug report at https://github.com/AnonUserGuy/terraria-minimap-visualizer.");
+        }
+        worldMap.release = release & ~0x8000;
         if (worldMap.release > 135) {
             MapReader.readMetadata(fileIO, worldMap);
         } else {
@@ -120,11 +127,11 @@ export class MapReader {
         } else if (magicNumber === "xindong") {
             worldMap.isChinese = true;
         } else {
-            throw new TypeError(`Bad file: missing relogic header, not terraria file`);
+            throw new TypeError("Bad file: missing relogic header, not terraria file");
         }
         const fileType = fileIO.readByte();
         if (fileType !== FileType.Map) {
-            throw new TypeError(`Bad file: is terraria file, but not .map file`);
+            throw new TypeError("Bad file: is terraria file, but not .map file");
         }
         worldMap.revision = Number(fileIO.ReadUInt32());
         fileIO.readUInt64(); // pass unused bitfield
@@ -142,7 +149,7 @@ export class MapReader {
                     const flags = new MapFlagsV1(worldMap.release >= 50 ? fileIO.readUInt16() : fileIO.readByte());
                     let cell: MapCell;
                     if (flags.tile) {
-                        cell = new MapTile(light, id, flags.option);
+                        cell = new MapTile(light, id, flags.option, flags.paint);
                     }
                     else if (flags.water) {
                         cell = new MapLiquid(light, LiquidID.Water);
@@ -154,7 +161,7 @@ export class MapReader {
                         cell = new MapLiquid(light, LiquidID.Honey);
                     }
                     else if (flags.wall) {
-                        cell = new MapWall(light, id + flags.option, 0);
+                        cell = new MapWall(light, id + flags.option, 0, flags.paint);
                     }
                     else {
                         cell = new MapAir(light, id);
@@ -259,7 +266,7 @@ export class MapReader {
                     case MapCellGroupSerialized.Honey:
                         let liquidId = cellGroup - 3;
                         if ((paint & 0x40) == 0x40) { // shimmer
-                            liquidId = 3;
+                            liquidId = LiquidID.Shimmer;
                         }
                         cell = new MapLiquid(light, liquidId)
                         break;

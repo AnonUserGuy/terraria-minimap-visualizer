@@ -3,7 +3,7 @@ import { BinaryReader } from "../net/binary-reader.js";
 import { BinaryWriter } from "../net/binary-writer.js";
 import { MapReader } from "./map-reader.js";
 import { SchematicWriter } from "../tedit/schematic-writer.js";
-import { MapDataJSON, MapData } from "../data/map-data.js";
+import { MapData } from "../data/map-data.js";
 import { MapCell, MapCellGroup } from "./cell/map-cell.js";
 import { MapCellPaintable } from "./cell/map-cell-paintable.js";
 import { MapTile } from "./cell/map-tile.js";
@@ -29,11 +29,19 @@ export class WorldMap {
     public rockLayer: number; 
     public rockLayerEstimated: boolean; // always estimated by program, only not estimated if assigned externally
 
-    constructor(mapData: MapData | MapDataJSON, width = 0, height = 0) {
-        this.mapData = mapData instanceof MapData ? mapData : new MapData(mapData);
+    constructor(mapData?: MapData | unknown, width = 0, height = 0) {
+        if (!mapData || !(mapData instanceof MapData)) {
+            this.dataFromJson(mapData);
+        } else {
+            this.mapData = mapData;
+        }
         this._width = width;
         this._height = height;
         this.cells = Array(this._height * this._width);
+    }
+
+    public dataFromJson(mapDataJSON?: unknown) {
+        this.mapData = new MapData(mapDataJSON);
     }
 
     public get width() {

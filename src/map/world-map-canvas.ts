@@ -1,5 +1,5 @@
 import { Color } from "../net/color.js";
-import { MapData, MapDataJSON } from "../data/map-data.js";
+import { MapData } from "../data/map-data.js";
 import { MapCell, MapCellGroup } from "./cell/map-cell.js";
 import { MapCellPaintable } from "./cell/map-cell-paintable.js";
 import { WorldMap } from "./world-map.js";
@@ -31,7 +31,7 @@ export class WorldMapCanvas extends WorldMap {
         "Unexplored/Explored"
     ]
 
-    constructor(mapData: MapData | MapDataJSON, canvas: HTMLCanvasElement) {
+    constructor(mapData: MapData | unknown, canvas: HTMLCanvasElement) {
         super(mapData, canvas.width, canvas.height);
 
         this.canvasOutput = canvas;

@@ -341,6 +341,8 @@ export class SchematicWriter {
                         case 4:
                             n = 34; // 34~37
                             break;
+                        case 11:
+                            n = 62; // 62~64
                         default:
                             n = 0;
                             break;
@@ -368,6 +370,8 @@ export class SchematicWriter {
                         case 4:
                             n = 48; // 48~53
                             break;
+                        case 11:
+                            n = 73; // 73~77
                         default:
                             n = 0;
                             break;

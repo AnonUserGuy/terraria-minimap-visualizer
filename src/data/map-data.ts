@@ -46,19 +46,19 @@ export enum TileType {
 }
 
 export interface MapDataJSON {
-    release: number,
-    versions: VersionData[],
-    tiles: TileData[],
-    walls: WallData[],
-    liquids: LiquidData[],
-    sky: AirData,
-    dirt: AirData,
-    rock: AirData,
-    hell: Color,
-    paints: PaintData[],
-    tree: TreeData,
-    anyWall: MapCellPaintableJSON,
-    unexploredTile: MapCellPaintableJSON
+    release?: number,
+    versions?: VersionData[],
+    tiles?: TileData[],
+    walls?: WallData[],
+    liquids?: LiquidData[],
+    sky?: AirData,
+    dirt?: AirData,
+    rock?: AirData,
+    hell?: Color,
+    paints?: PaintData[],
+    tree?: TreeData,
+    anyWall?: MapCellPaintableJSON,
+    unexploredTile?: MapCellPaintableJSON
 }
 interface VersionData {
     release: number,
@@ -154,19 +154,44 @@ export class MapData {
         name: "Unknown",
         color: Colors.black 
     }
+    private static unknownAir: AirData = {
+        count: 1,
+        min: Colors.black,
+        max: Colors.black
+    }
+    private static unknownTree: TreeData = {
+        base:             [0, 0],
+        baseTop:          [0, 0],
+        baseBranchLeft:   [0, 0],
+        branchLeft:       [0, 0],
+        branchLeftLeafy:  [0, 0],
+        baseBranchRight:  [0, 0],
+        branchRight:      [0, 0],
+        branchRightLeafy: [0, 0],
+        baseBranchBoth:   [0, 0],
+        baseTrunkLeft:    [0, 0],
+        trunkLeft:        [0, 0],
+        baseTrunkRight:   [0, 0],
+        trunkRight:       [0, 0],
+        trunkBoth:        [0, 0]
+    }
 
-    constructor(json: MapDataJSON) {
-        this.release = json.release;
-        this.versions = json.versions.sort((a, b) => a.release - b.release);
-        this.tiles = json.tiles;
-        this.walls = json.walls;
-        this.liquids = json.liquids;
-        this.sky = json.sky;
-        this.dirt = json.dirt;
-        this.rock = json.rock;
-        this.hell = json.hell;
-        this.paints = json.paints;
-        this.tree = json.tree;
+    constructor(json?: MapDataJSON) {
+        this.fromJson(json || {});
+    }
+
+    public fromJson(json: MapDataJSON) {
+        this.release = json.release || -1;
+        this.versions = json.versions ? json.versions.sort((a, b) => a.release - b.release) : [];
+        this.tiles = json.tiles || [];
+        this.walls = json.walls || [];
+        this.liquids = json.liquids || [];
+        this.sky = json.sky || MapData.unknownAir;
+        this.dirt = json.dirt || MapData.unknownAir;
+        this.rock = json.rock || MapData.unknownAir;
+        this.hell = json.hell || Colors.black;
+        this.paints = json.paints || [];
+        this.tree = json.tree || MapData.unknownTree;
 
         this.frameImportant = [];
         for (let i = 0; i < this.tiles.length; i++) {
@@ -196,7 +221,14 @@ export class MapData {
         MapData.prepareAirColors(this.dirt, this.dirt.count - 1);
     }
 
-    private getMapCellPaintable(json: MapCellPaintableJSON, isWall) {
+    private getMapCellPaintable(json: MapCellPaintableJSON, isWall: boolean) {
+        if (!json) {
+            if (isWall) {
+                return MapData.unknownWall;
+            } else {
+                return MapData.unknownTile;
+            }
+        }
         if (json.id === undefined) {
             if (json.name) {
                 json.id = (isWall ? this.walls : this.tiles).findIndex(data => data.name === json.name);

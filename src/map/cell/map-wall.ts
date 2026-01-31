@@ -1,4 +1,4 @@
-import { MapCellGroup } from "./map-cell";
+import { MapCellGroup } from "./map-cell.js";
 import { MapCellPaintable } from "./map-cell-paintable.js";
 
 export class MapWall extends MapCellPaintable {

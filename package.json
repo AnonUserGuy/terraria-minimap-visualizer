@@ -1,7 +1,7 @@
 {
   "name": "terraria-minimap-visualizer",
   "version": "0.1.0",
-  "description": "for visualizing/converting Terraria minimap (.map) files",
+  "description": "Visualizes and converts Terraria minimap (.map) files",
   "keywords": [
     "Terraria"
   ],
@@ -14,17 +14,30 @@
     "url": "git+https://github.com/AnonUserGuy/terraria-minimap-visualizer.git"
   },
   "license": "MS-PL",
-  "author": "AnonUserGuy",
+  "author": "DogLuggage",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": "./dist/browser/terraria-minimap-visualizer.js",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js",
+      "require": "./dist/node/index.js"
+    }
+  },
+  "browser": "./dist/browser/terraria-minimap-visualizer.js",
+  "main": "./dist/node/index.js",
+  "types": "./dist/node/index.d.ts",
   "files": [
-    "/dist"
+    "dist",
+    "LICENSE.txt"
   ],
   "scripts": {
-    "build": "tsc"
+    "build:node": "tsc",
+    "build:browser": "node build.mjs",
+    "build": "npm run build:node && npm run build:browser"
   },
   "devDependencies": {
+    "esbuild": "^0.27.2",
     "typescript": "^5.9.3"
   }
 }
