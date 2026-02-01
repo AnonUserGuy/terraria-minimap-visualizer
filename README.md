@@ -3,6 +3,8 @@ Typescript library for working with *Terraria* minimap (.map) files. Can read .m
  - `WorldMap` - Base class. Reads .map files, then can serve basic information about the minimap or convert it to a TEdit schematic.
  - `WorldMapCanvas` - Derived class. Once .map file is read, can render the world map in an HTML canvas element with options for toggling layers (tiles, walls, liquids, air) and such.
 
+This module was primarly made as I had lost the very first world I'd played on in Terraria, but still had a .map file from it. As such, I was curious if I could recover the world somehow from it. 
+
 ## Installation
 ### npm (Bundlers / Node)
 ``` bash
@@ -85,7 +87,7 @@ const mapCell = worldMap.cell(x, y);
 ```
 The color of any cell can be obtained using `color`. A 3-element number array is returned containing the rgb color values ranging from 0-255.
 ``` js
-const color = worldMap.color(x, y);
+const color = worldMap.color(x, y); // [0~255, 0~255, 0~255]
 ```
 If a cell is a tile or wall and has been painted, the color of the cell painted can be obtained using `colorPainted`. Unpainted cells will return the same value as `color`.
 ``` js
@@ -135,13 +137,84 @@ worldMapCanvas.drawFast([0, 1, 1, 1, 1, 1, 1, 0]); // renders fast all layers ex
 worldMapCanvas.drawAccurate([0, 1, 1, 0, 0, 0, 0, 0]); // renders accurate only tiles, unpainted and painted
 ```
 
-The color of air cell depends on the values of `worldSurface` and `cavernLayer`. The air layer isn't automatically rerendered when these are reassigned. Instead, it must be done with `redrawAirLayer`. 
+The color of air depends on the values of `worldSurface` and `cavernLayer`. The air layer isn't automatically rerendered when these are reassigned. Instead, it must be done with `redrawAirLayer`. 
 ``` js
 worldMapCanvas.read(mapFileBuffer);
 worldMapCanvas.cavernLayer = 600;
 worldMapCanvas.redrawAirLayer();
 worldMapCanvas.drawFast([0, 0, 0, 0, 0, 0, 1, 0]); // render just the redrawn air layer
 ```
+
+### MapCell
+The world map is made up of a grid of `MapCell`s, obtained using `cell` on a `WorldMap` object. It has two derived classes: `MapCellPaintable` and `MapAir`.
+``` js
+const mapCell = worldMap.cell(x, y);
+```
+Every map cell contains the following properties:
+``` js
+mapCell.light // Light level for cell, ranging from 0~255
+mapCell.group // Enum for what kind of cell it is. Can be 0 = empty, 1 = tile, 2 = wall, 3 = liquid, 4 = air
+mapCell.id // Numeric ID for cell. For a tile/wall/liquid, this corresponds to the Terraria internal ID for the cell type
+```
+
+`copy` can be used to make a unique copy of the cell. 
+``` js
+const mapCellCopy = mapCell.copy();
+```
+
+`copyWithLight` can be used to make a unique copy of the cell, but with the new level having a different light level. 
+``` js
+const mapCellDark = mapCell.copyWithLight(0);
+const mapCellBright = mapCell.copyWithLight(255);
+```
+
+`equals` can be used to test if two cells are identical (same group, light level, ID, etc.)
+``` js
+mapCell.equals(mapCellCopy); // true
+mapCell.equals(mapCellDark); // false
+```
+
+`equalsWithoutLight` can be used to test if two cells are identical, disregarding their light levels
+``` js
+mapCell.equalsWithoutLight(mapCellCopy); // true
+mapCell.equalsWithoutLight(mapCellDark); // true
+```
+
+`equalsAfterExport` can be used to test if two cells will be identical when exporting to a TEdit schematic. For most cell groups, this is the same as `equalsWithoutLight`.
+``` js
+mapCell.equalsWithoutLight(mapCellCopy); // true
+mapCell.equalsWithoutLight(mapCellDark); // true
+```
+
+### MapCellPaintable
+`MapCellPaintable` is a subclass of `MapCell`, describing specifically tiles and walls. Tiles and walls both have a `paint` property which describes what paint the cell has as a Terraria internal paint ID. 
+
+They also have another property, `option`, which is a little more complicated. Some tiles/walls in Terraria with the same ID will take on different colors depending on various factors. Examples include:
+- A sunflower's head is displayed as yellow but its stem is displayed as green.
+- Chests will display a color depending on what type of chest they are. For example, wooden chests are brown but ice chests are bright blue.
+
+ The `option` property is used to describe what color variation to use in these circumstances.
+
+ ### MapAir
+ `MapAir` is a subclass of `MapCell`, describing air on the map. Air within a proper Terraria .wld file doesn't have any sort of ID. However, within minimaps, it does have an ID used to describe what color underground air should be, which depends on what biome it appears in. Most underground air is brown/grey depending on depth, while underground air in the ice biome takes on a light blue tint.
+ 
+ `MapAir` doesn't come with any new properties or methods, but the `equalsAfterExport` method is notably modified to ignore air's ID as that only affects minimap display.
+
+ 
+## Building
+### Prerequisites
+- Node.js (v18+ recommended)
+- npm
+
+### Install dependencies
+```bash
+npm install
+```
+### Build typescript files
+```bash
+npm run build
+``` 
+Output module will be generated at `./dist/node/`.
 
 ## License
 Licensed under the Microsoft Public License (MS-PL).
