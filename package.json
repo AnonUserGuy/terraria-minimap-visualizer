@@ -18,17 +18,16 @@
   "type": "module",
   "exports": {
     ".": {
-      "browser": "./dist/browser/terraria-minimap-visualizer.js",
       "types": "./dist/node/index.d.ts",
       "import": "./dist/node/index.js",
       "require": "./dist/node/index.js"
     }
   },
-  "browser": "./dist/browser/terraria-minimap-visualizer.js",
   "main": "./dist/node/index.js",
   "types": "./dist/node/index.d.ts",
   "files": [
     "dist",
+    "README.md",
     "LICENSE.txt"
   ],
   "scripts": {

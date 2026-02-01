@@ -1,7 +1,6 @@
 import { Color, Colors } from "../net/color.js"
 import { MapCellGroup } from "../map/cell/map-cell.js"
-import { MapTile } from "../map/cell/map-tile.js"
-import { MapWall } from "../map/cell/map-wall.js"
+import { MapCellPaintable } from "../map/cell/map-cell-paintable.js"
 
 export enum TileType {
     None,
@@ -135,8 +134,8 @@ export class MapData {
     public tree: TreeData;
 
     public frameImportant: boolean[];
-    public anyWall: MapWall;
-    public unexploredTile: MapTile;
+    public anyWall: MapCellPaintable;
+    public unexploredTile: MapCellPaintable;
 
     private static unknownTile: TileData = {
         name: "Unknown",
@@ -213,8 +212,8 @@ export class MapData {
                 }
             }
         }
-        this.anyWall = this.getMapCellPaintable(json.anyWall, true) as MapWall;
-        this.unexploredTile = this.getMapCellPaintable(json.unexploredTile, false) as MapTile;
+        this.anyWall = this.getMapCellPaintable(json.anyWall, true);
+        this.unexploredTile = this.getMapCellPaintable(json.unexploredTile, false);
 
         MapData.prepareAirColors(this.sky, this.sky.count);
         MapData.prepareAirColors(this.rock, this.rock.count - 1);
@@ -224,9 +223,9 @@ export class MapData {
     private getMapCellPaintable(json: MapCellPaintableJSON, isWall: boolean) {
         if (!json) {
             if (isWall) {
-                return MapData.unknownWall;
+                return new MapCellPaintable(0, MapCellGroup.Wall, 0);
             } else {
-                return MapData.unknownTile;
+                return new MapCellPaintable(0, MapCellGroup.Tile, 0);
             }
         }
         if (json.id === undefined) {
@@ -250,19 +249,19 @@ export class MapData {
             }
         }
         if (isWall) {
-            return new MapWall(0, json.id, 0, json.paintId);
+            return new MapCellPaintable(0, MapCellGroup.Wall, json.id, 0, json.paintId);
         } else {
-            return new MapTile(0, json.id, 0, json.paintId);
+            return new MapCellPaintable(0, MapCellGroup.Tile, json.id, 0, json.paintId);
         }
     }
 
     public tile(id: number) {
         return this.tiles[id] || MapData.unknownTile;
     }
-    public tileColor(tile: MapTile) {
+    public tileColor(tile: MapCellPaintable) {
         return this.tile(tile.id).colors[tile.option] || Colors.black;
     }
-    public tileString(tile: MapTile) {
+    public tileString(tile: MapCellPaintable) {
         const tileData = this.tile(tile.id);
         const paintData = this.paint(tile.paint);
         return `Tile - ${tileData.name} (${tile.id}) - Option ${tile.option + 1}/${tileData.colors.length} - Paint ${paintData.name} (${tile.paint})`; 
@@ -271,10 +270,10 @@ export class MapData {
     public wall(id: number) {
         return this.walls[id] || MapData.unknownWall;
     }
-    public wallColor(wall: MapWall) {
+    public wallColor(wall: MapCellPaintable) {
         return this.wall(wall.id).colors[wall.option] || Colors.black;
     }
-    public wallString(wall: MapWall) {
+    public wallString(wall: MapCellPaintable) {
         const wallData = this.wall(wall.id);
         const paintData = this.paint(wall.paint);
         return `Tile - ${wallData.name} (${wall.id}) - Option ${wall.option + 1}/${wallData.colors.length} - Paint ${paintData.name} (${wall.paint})`; 

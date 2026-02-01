@@ -2,9 +2,8 @@ import { BinaryWriter } from "../net/binary-writer.js";
 import { TileType } from "../data/map-data.js";
 import { LiquidID } from "../id/liquid-ids.js";
 import { MapCell, MapCellGroup } from "../map/cell/map-cell.js";
-import { MapWall } from "../map/cell/map-wall.js";
-import { MapTile } from "../map/cell/map-tile.js";
 import { WorldMap } from "../map/world-map.js";
+import { MapCellPaintable } from "../map/cell/map-cell-paintable.js";
 
 export class SchematicWriter {
 
@@ -50,16 +49,16 @@ export class SchematicWriter {
                 let v2 = 0;
                 if (cell !== worldMap.mapData.unexploredTile) {
                     if (frameImportant) {
-                        this.getTileUVFromGeometry(worldMap, cell as MapTile, x, y, u, v);
+                        this.getTileUVFromGeometry(worldMap, cell as MapCellPaintable, x, y, u, v);
                         const tileData = worldMap.mapData.tile(cell.id);
                         if (tileData.type) {
-                            [u2, v2] = this.getTileUVFromOption(tileData.type as TileType, (cell as MapTile).option);
+                            [u2, v2] = this.getTileUVFromOption(tileData.type as TileType, (cell as MapCellPaintable).option);
                             if (tileData.type === TileType.Torches) {
                                 needsWall = this.needsWall(worldMap, x, y);
                             }
                         }
                     } else if (cell.group === MapCellGroup.Wall) {
-                        lastWall = cell as MapWall;
+                        lastWall = cell as MapCellPaintable;
                     }
                 }
 
@@ -96,7 +95,7 @@ export class SchematicWriter {
     }
 
     // largely adapted from Terraria-Map-Editor/src/TEdit.Terraria/World.FileV2.cs -> World.SerializeTileData
-    static serializeCellData(cell: MapCell, u: number, v: number, needsWall: boolean, wall: MapWall, frameImportant: boolean) {
+    static serializeCellData(cell: MapCell, u: number, v: number, needsWall: boolean, wall: MapCellPaintable, frameImportant: boolean) {
         const cellData = new Uint8Array(16);
         let dataIndex = 4;
 
@@ -120,9 +119,9 @@ export class SchematicWriter {
                 cellData[dataIndex++] = ((v & 0xFF00) >> 8); // high byte
             }
 
-            if ((cell as MapTile).paint) {
+            if ((cell as MapCellPaintable).paint) {
                 header3 |= 0b0000_1000;
-                cellData[dataIndex++] = (cell as MapTile).paint;
+                cellData[dataIndex++] = (cell as MapCellPaintable).paint;
             }
 
             if (needsWall) {
@@ -138,9 +137,9 @@ export class SchematicWriter {
             header1 |= 0b0000_0100;
             cellData[dataIndex++] = cell.id & 0xFF;
 
-            if ((cell as MapWall).paint) {
+            if ((cell as MapCellPaintable).paint) {
                 header3 |= 0b0001_0000;
-                cellData[dataIndex++] = (cell as MapWall).paint;
+                cellData[dataIndex++] = (cell as MapCellPaintable).paint;
             }
         } else if (cell.group === MapCellGroup.Liquid) {
             if (cell.id === LiquidID.Water) {
@@ -168,7 +167,7 @@ export class SchematicWriter {
         return { cellData, headerIndex, dataIndex };
     }
 
-    static getTileUVFromGeometry(worldMap: WorldMap, tile: MapTile, x: number, y: number, u: number[], v: number[]) {
+    static getTileUVFromGeometry(worldMap: WorldMap, tile: MapCellPaintable, x: number, y: number, u: number[], v: number[]) {
         const tileData = worldMap.mapData.tile(tile.id);
         if (tileData.type === TileType.Trees) {
             this.resolveTree(worldMap, x, y, u, v);

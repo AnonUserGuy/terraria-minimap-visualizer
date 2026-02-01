@@ -1,9 +1,7 @@
 import { BinaryReader } from "../net/binary-reader.js";
 import { LiquidID } from "../id/liquid-ids.js";
-import { MapCell } from "./cell/map-cell.js";
-import { MapTile } from "./cell/map-tile.js";
-import { MapWall } from "./cell/map-wall.js";
-import { MapLiquid } from "./cell/map-liquid.js";
+import { MapCell, MapCellGroup } from "./cell/map-cell.js";
+import { MapCellPaintable } from "./cell/map-cell-paintable.js";
 import { MapAir } from "./cell/map-air.js";
 import { WorldMap } from "./world-map.js";
 
@@ -149,19 +147,19 @@ export class MapReader {
                     const flags = new MapFlagsV1(worldMap.release >= 50 ? fileIO.readUInt16() : fileIO.readByte());
                     let cell: MapCell;
                     if (flags.tile) {
-                        cell = new MapTile(light, id, flags.option, flags.paint);
+                        cell = new MapCellPaintable(light, MapCellGroup.Tile, id, flags.option, flags.paint);
                     }
                     else if (flags.water) {
-                        cell = new MapLiquid(light, LiquidID.Water);
+                        cell = new MapCell(light, MapCellGroup.Liquid, LiquidID.Water);
                     }
                     else if (flags.lava) {
-                        cell = new MapLiquid(light, LiquidID.Lava);
+                        cell = new MapCell(light, MapCellGroup.Liquid, LiquidID.Lava);
                     }
                     else if (flags.honey) {
-                        cell = new MapLiquid(light, LiquidID.Honey);
+                        cell = new MapCell(light, MapCellGroup.Liquid, LiquidID.Honey);
                     }
                     else if (flags.wall) {
-                        cell = new MapWall(light, id + flags.option, 0, flags.paint);
+                        cell = new MapCellPaintable(light, MapCellGroup.Wall, id + flags.option, 0, flags.paint);
                     }
                     else {
                         cell = new MapAir(light, id);
@@ -256,10 +254,10 @@ export class MapReader {
                         x += repeated;
                         continue;
                     case MapCellGroupSerialized.Tile:
-                        cell = new MapTile(light, tileIdFromIndex[index], tileOptionFromIndex[index], paint >> 1 & 31)
+                        cell = new MapCellPaintable(light, MapCellGroup.Tile, tileIdFromIndex[index], tileOptionFromIndex[index], paint >> 1 & 31)
                         break;
                     case MapCellGroupSerialized.Wall:
-                        cell = new MapWall(light, wallIdFromIndex[index], wallOptionFromIndex[index], paint >> 1 & 31)
+                        cell = new MapCellPaintable(light, MapCellGroup.Wall, wallIdFromIndex[index], wallOptionFromIndex[index], paint >> 1 & 31)
                         break;
                     case MapCellGroupSerialized.Water:
                     case MapCellGroupSerialized.Lava:
@@ -268,7 +266,7 @@ export class MapReader {
                         if ((paint & 0x40) == 0x40) { // shimmer
                             liquidId = LiquidID.Shimmer;
                         }
-                        cell = new MapLiquid(light, liquidId)
+                        cell = new MapCell(light, MapCellGroup.Liquid, liquidId)
                         break;
                     case MapCellGroupSerialized.Sky:
                         cell = new MapAir(light, index);

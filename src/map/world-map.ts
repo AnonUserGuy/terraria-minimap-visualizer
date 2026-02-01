@@ -6,8 +6,6 @@ import { SchematicWriter } from "../tedit/schematic-writer.js";
 import { MapData } from "../data/map-data.js";
 import { MapCell, MapCellGroup } from "./cell/map-cell.js";
 import { MapCellPaintable } from "./cell/map-cell-paintable.js";
-import { MapTile } from "./cell/map-tile.js";
-import { MapWall } from "./cell/map-wall.js";
 
 export class WorldMap {
 
@@ -99,9 +97,9 @@ export class WorldMap {
                     return this.mapData.hellColor();
                 }
             case MapCellGroup.Tile:
-                return this.mapData.tileColor(cell as MapTile);
+                return this.mapData.tileColor(cell as MapCellPaintable);
             case MapCellGroup.Wall:
-                return this.mapData.wallColor(cell as MapWall);
+                return this.mapData.wallColor(cell as MapCellPaintable);
             case MapCellGroup.Liquid:
                 return this.mapData.liquidColor(cell.id);
         }
@@ -140,9 +138,9 @@ export class WorldMap {
                     return res + "Underworld Layer";
                 }
             case MapCellGroup.Tile:
-                return res + this.mapData.tileString(cell as MapTile);
+                return res + this.mapData.tileString(cell as MapCellPaintable);
             case MapCellGroup.Wall:
-                return res + this.mapData.wallString(cell as MapWall);
+                return res + this.mapData.wallString(cell as MapCellPaintable);
             case MapCellGroup.Liquid:
                 return res + this.mapData.liquidString(cell.id);
         }
