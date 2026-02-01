@@ -3,6 +3,8 @@ Typescript library for working with *Terraria* minimap (.map) files. Can read .m
  - `WorldMap` - Base class. Reads .map files, then can serve basic information about the minimap or convert it to a TEdit schematic.
  - `WorldMapCanvas` - Derived class. Once .map file is read, can render the world map in an HTML canvas element with options for toggling layers (tiles, walls, liquids, air) and such.
 
+This module was primarly made as I had lost the very first world I'd played on in Terraria, but still had a .map file from it. As such, I was curious if I could recover the world somehow from it. 
+
 ## Installation
 ### npm (Bundlers / Node)
 ``` bash
