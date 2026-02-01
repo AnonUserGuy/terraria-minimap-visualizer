@@ -5,6 +5,8 @@ Typescript library for working with *Terraria* minimap (.map) files. Can read .m
 
 This module was primarly made as I had lost the very first world I'd played on in Terraria, but still had a .map file from it. As such, I was curious if I could recover the world somehow from it. 
 
+demo: https://anonuserguy.github.io/page/terraria_map/
+
 ## Installation
 ### npm (Bundlers / Node)
 ``` bash
